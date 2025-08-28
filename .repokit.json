@@ -1,0 +1,15 @@
+{
+  "repokit_managed": true,
+  "generated_by": "repokit",
+  "version": "0.4.3",
+  "created_at": "2025-08-28T03:42:23.313782Z",
+  "project_name": "modified_datetime_fix",
+  "language": "python",
+  "branch_strategy": "simple",
+  "private_branch": "private",
+  "description": "A new project repository",
+  "author": {
+    "name": "Dustin",
+    "email": "6962246+djdarcy@users.noreply.github.com"
+  }
+}

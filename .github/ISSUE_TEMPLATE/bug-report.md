@@ -3,7 +3,7 @@ name: Bug report
 about: Create a report to help improve modified_datetime_fix
 title: "[BUG] "
 labels: bug
-assignees: ''
+assignees: 'djdarcy'
 ---
 
 **Describe the bug**
