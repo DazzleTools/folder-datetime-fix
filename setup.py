@@ -7,14 +7,14 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="folder-datetime-fix",
-    version="0.1.0",
+    version="0.5.0",
     description="Fix folder timestamps corrupted by system files like thumbs.db on Windows",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Dustin",
     author_email="6962246+djdarcy@users.noreply.github.com",
     url="https://github.com/djdarcy/modified_datetime_fix",
-    py_modules=["mod_fldr_dt", "folder_scanner", "timestamp_fixer", "system_files"],
+    py_modules=["mod_fldr_dt", "folder_scanner", "timestamp_fixer", "system_files", "unc_handler", "strategy_help"],
     entry_points={
         "console_scripts": [
             "folder-datetime-fix=mod_fldr_dt:main",

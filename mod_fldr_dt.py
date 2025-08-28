@@ -15,9 +15,13 @@ from datetime import datetime
 from folder_scanner import FolderScanner
 from timestamp_fixer import TimestampFixer
 from unc_handler import get_unc_handler
+from strategy_help import print_strategy_help
+
+__version__ = '0.5.0'
+MAX_DEPTH_INFINITE = 100  # Reasonable maximum for "infinite" depth
 
 
-def parse_arguments():
+def parse_arguments(argv=None):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         description='Fix folder modified timestamps to match their content',
@@ -27,16 +31,23 @@ Examples:
   %(prog)s C:\\Projects --depth 0                    # Fix only Projects folder
   %(prog)s C:\\Projects --depth 1                    # Fix only immediate subfolders
   %(prog)s C:\\Projects --depth 0 --depth 1         # Fix Projects AND immediate subfolders
-  %(prog)s C:\\Projects --depth 1 --strategy deep   # Each subfolder based on entire tree
-  %(prog)s \\\\server\\share --fix-all                # Fix all folders in tree (alias)
-  %(prog)s . --fix-tree --skip-generated           # Fix tree, skip system files
+  %(prog)s C:\\Projects --depth infinite             # Fix entire tree (all depths)
+  %(prog)s C:\\Projects --fix-2                      # Fix folder + immediate children
+  %(prog)s \\\\server\\share --fix-all                # Fix entire tree recursively
+  %(prog)s . --fix-all --skip-generated            # Fix all with system files skipped
   %(prog)s C:\\Work --depth 2 --dry-run --verbose   # Preview changes at depth 2
 
 Quick Start for Network Shares:
-  %(prog)s --unc-path "\\\\server\\folder" --fix-all --skip-generated --dry-run
-  # Preview fixes for folder AND subfolders corrupted by system files, then remove --dry-run to apply
+  %(prog)s --unc-path "\\\\server\\folder" --fix-2 --skip-generated --dry-run
+  # Preview fixes for folder AND immediate subfolders, then remove --dry-run to apply
         """
     )
+    
+    # Version information
+    parser.add_argument('--version', '-v',
+                       action='version',
+                       version=f'%(prog)s {__version__}',
+                       help='Show program version and exit')
     
     # Path argument - either positional or via --unc-path
     parser.add_argument('path', 
@@ -49,9 +60,8 @@ Quick Start for Network Shares:
     # Depth-based processing
     parser.add_argument('--depth', '-d',
                        action='append',
-                       type=int,
                        dest='depths',
-                       help='Process folders at this depth (can be specified multiple times)')
+                       help='Process folders at this depth (can be specified multiple times, or use "infinite" for all depths)')
     
     # Processing strategy
     parser.add_argument('--strategy', '-s',
@@ -60,13 +70,13 @@ Quick Start for Network Shares:
                        help='How to calculate timestamps (default: shallow)')
     
     # Convenience aliases
+    parser.add_argument('--fix-2',
+                       action='store_true',
+                       help='Fix folder and immediate children (alias for: --depth 0 --depth 1 --strategy deep)')
+    
     parser.add_argument('--fix-all',
                        action='store_true',
-                       help='Alias for: --depth 0 --depth 1 --strategy deep')
-    
-    parser.add_argument('--fix-tree',
-                       action='store_true',
-                       help='Process entire tree recursively')
+                       help='Fix entire tree recursively (alias for: --depth infinite --strategy deep)')
     
     parser.add_argument('--fix-immediate',
                        action='store_true',
@@ -82,7 +92,7 @@ Quick Start for Network Shares:
                        action='store_true',
                        help='Preview changes without applying them')
     
-    parser.add_argument('--verbose', '-v',
+    parser.add_argument('--verbose', '-V',
                        action='store_true',
                        help='Show detailed output')
     
@@ -100,20 +110,35 @@ Quick Start for Network Shares:
     parser.add_argument('--max-depth',
                        type=int,
                        metavar='N',
-                       help='Maximum depth for --fix-tree option')
+                       help='Maximum depth for --fix-all or --depth infinite (default: 100)')
     
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+    
+    # Process depth arguments - handle "infinite" special case
+    if args.depths:
+        processed_depths = []
+        for depth_str in args.depths:
+            if depth_str.lower() in ['infinite', 'inf', 'all']:
+                # Generate depths up to a reasonable maximum
+                max_d = args.max_depth if args.max_depth else MAX_DEPTH_INFINITE
+                processed_depths.extend(range(0, max_d + 1))
+            else:
+                try:
+                    processed_depths.append(int(depth_str))
+                except ValueError:
+                    parser.error(f"Invalid depth value: {depth_str}. Use integers or 'infinite'")
+        args.depths = processed_depths
     
     # Process convenience aliases
-    if args.fix_all:
+    if args.fix_2:
         if not args.depths:
             args.depths = []
         args.depths.extend([0, 1])
         args.strategy = 'deep'
     
-    elif args.fix_tree:
-        # Generate depths up to max_depth
-        max_d = args.max_depth if args.max_depth else 10
+    elif args.fix_all:
+        # Process entire tree recursively
+        max_d = args.max_depth if args.max_depth else MAX_DEPTH_INFINITE
         if not args.depths:
             args.depths = []
         args.depths.extend(range(0, max_d + 1))
@@ -165,6 +190,11 @@ def print_summary(stats: dict, verbose: bool = False):
 
 def main():
     """Main entry point."""
+    # Check for special help commands first
+    if len(sys.argv) >= 3 and sys.argv[1] == '--help' and sys.argv[2] in ['strategy', 'strategies']:
+        print_strategy_help()
+        return 0
+    
     args = parse_arguments()
     
     # Determine which path to use
@@ -174,7 +204,8 @@ def main():
     elif args.path:
         path_to_use = args.path
     else:
-        print("ERROR: Must provide either path or --unc-path", file=sys.stderr)
+        # No path provided - show help
+        parse_arguments(['--help'])
         return 1
     
     # Initialize UNC handler for network path support
