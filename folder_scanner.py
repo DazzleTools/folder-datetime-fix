@@ -209,13 +209,35 @@ class FolderScanner:
                 # Get timestamp based on strategy
                 if strategy == 'shallow':
                     timestamp = self.get_shallow_timestamp(folder)
+                    results.append((folder, timestamp))
                 elif strategy == 'deep':
+                    # For deep strategy, we need to fix ALL subfolders too
                     timestamp = self.get_deep_timestamp(folder)
+                    results.append((folder, timestamp))
+                    
+                    # When using deep strategy, also process all subfolders
+                    # This ensures intermediate folders get fixed
+                    for root, dirs, _ in os.walk(folder):
+                        root_path = Path(root)
+                        if root_path != folder and root_path not in processed:
+                            # Each subfolder gets the timestamp of its own subtree
+                            subfolder_timestamp = self.get_deep_timestamp(root_path)
+                            results.append((root_path, subfolder_timestamp))
+                            processed.add(root_path)
+                            
                 elif strategy == 'smart':
                     timestamp = self.get_smart_timestamp(folder)
+                    results.append((folder, timestamp))
+                    
+                    # For smart strategy with subdirs, also process them
+                    if any(p.is_dir() for p in folder.iterdir()):
+                        for root, dirs, _ in os.walk(folder):
+                            root_path = Path(root)
+                            if root_path != folder and root_path not in processed:
+                                subfolder_timestamp = self.get_smart_timestamp(root_path)
+                                results.append((root_path, subfolder_timestamp))
+                                processed.add(root_path)
                 else:
                     raise ValueError(f"Unknown strategy: {strategy}")
-                
-                results.append((folder, timestamp))
         
         return results

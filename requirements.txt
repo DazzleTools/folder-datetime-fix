@@ -1,8 +1,11 @@
-# Project dependencies
-# Add your dependencies here
+# Core dependencies
+# No external dependencies required for basic functionality
 
-# Development dependencies
-pytest>=7.0.0
-black>=23.0.0
-flake8>=6.0.0
-mypy>=1.0.0
+# Optional dependencies
+# unctools>=0.1.0  # For enhanced UNC path support (install with pip install .[unc])
+
+# Development dependencies (install with pip install .[dev])
+# pytest>=7.0.0
+# black>=23.0.0
+# flake8>=6.0.0
+# mypy>=1.0.0
