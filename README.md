@@ -82,11 +82,16 @@ mod_fldr_dt.py C:\Projects --fix-immediate --skip-generated
 
 ### Network paths
 ```bash
-# Works with UNC paths
-mod_fldr_dt.py \\server\share\projects --fix-all --skip-generated
+# UNC paths - use forward slashes (recommended)
+mod_fldr_dt.py //server/share/projects --fix-all --skip-generated
+
+# UNC paths - or properly escape backslashes in shell
+mod_fldr_dt.py \\\\server\\share\\projects --fix-all --skip-generated
 
 # Works with mapped drives
 mod_fldr_dt.py Z:\team-projects --depth 1 --skip-generated
+
+# Note: Single backslash paths like \server\share are ambiguous and will show a warning
 ```
 
 ## Command Line Options

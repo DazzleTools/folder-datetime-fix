@@ -14,6 +14,7 @@ from datetime import datetime
 
 from folder_scanner import FolderScanner
 from timestamp_fixer import TimestampFixer
+from unc_handler import get_unc_handler
 
 
 def parse_arguments():
@@ -30,12 +31,20 @@ Examples:
   %(prog)s \\\\server\\share --fix-all                # Fix all folders in tree (alias)
   %(prog)s . --fix-tree --skip-generated           # Fix tree, skip system files
   %(prog)s C:\\Work --depth 2 --dry-run --verbose   # Preview changes at depth 2
+
+Quick Start for Network Shares:
+  %(prog)s --unc-path "\\\\server\\folder" --fix-all --skip-generated --dry-run
+  # Preview fixes for folder AND subfolders corrupted by system files, then remove --dry-run to apply
         """
     )
     
-    # Positional argument
+    # Path argument - either positional or via --unc-path
     parser.add_argument('path', 
+                       nargs='?',
                        help='Path to process (local or UNC)')
+    
+    parser.add_argument('--unc-path',
+                       help='UNC path with proper handling of backslashes (for copy-paste from Windows)')
     
     # Depth-based processing
     parser.add_argument('--depth', '-d',
@@ -158,12 +167,30 @@ def main():
     """Main entry point."""
     args = parse_arguments()
     
-    # Convert path to Path object
-    target_path = Path(args.path).resolve()
+    # Determine which path to use
+    if args.unc_path:
+        # Handle UNC path with proper backslash preservation
+        path_to_use = '\\\\' + args.unc_path.lstrip('\\')
+    elif args.path:
+        path_to_use = args.path
+    else:
+        print("ERROR: Must provide either path or --unc-path", file=sys.stderr)
+        return 1
+    
+    # Initialize UNC handler for network path support
+    unc_handler = get_unc_handler(verbose=args.verbose and not args.quiet)
+    
+    # Convert and normalize path using UNC handler
+    target_path, is_network = unc_handler.convert_for_processing(path_to_use)
+    
+    # Get path information
+    path_info = unc_handler.get_path_info(path_to_use)
     
     # Validate path exists
     if not target_path.exists():
         print(f"ERROR: Path does not exist: {target_path}", file=sys.stderr)
+        if is_network:
+            print("Note: This is a network path. Check network connectivity and permissions.", file=sys.stderr)
         return 1
     
     if not target_path.is_dir():
@@ -176,10 +203,18 @@ def main():
         print("Folder DateTime Fix Tool")
         print("=" * 50)
         print(f"Target:        {target_path}")
+        if path_info['is_unc']:
+            print(f"Type:          UNC Network Path")
+        elif path_info['is_network']:
+            print(f"Type:          Network Drive")
+        elif path_info['is_subst']:
+            print(f"Type:          Substituted Drive")
         print(f"Depths:        {args.depths}")
         print(f"Strategy:      {args.strategy}")
         print(f"Skip System:   {args.skip_generated}")
         print(f"Mode:          {'DRY RUN' if args.dry_run else 'EXECUTE'}")
+        if is_network and unc_handler.unctools_available:
+            print(f"UNCtools:      Enabled")
         print("=" * 50)
         print()
     
