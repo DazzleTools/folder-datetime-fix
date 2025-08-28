@@ -19,7 +19,7 @@ When you browse folders in Windows Explorer, it creates hidden system files like
 
 - **Depth-based processing**: Fix folders at specific depth levels from a base path
 - **Multiple strategies**: Choose shallow (immediate children), deep (entire subtree), or smart (automatic)
-- **System file exclusion**: Skip thumbs.db, desktop.ini, .DS_Store, and other system files
+- **System file exclusion**: Automatically skips thumbs.db, desktop.ini, .DS_Store by default
 - **UNC path support**: Works with network shares and mapped drives
 - **Dry-run mode**: Preview changes before applying them
 - **Detailed reporting**: Verbose output and change logs
@@ -52,44 +52,47 @@ python mod_fldr_dt.py --help
 
 ### Fix a single folder
 ```bash
-# Fix a folder based on its immediate contents, excluding system files
-mod_fldr_dt.py C:\Projects --depth 0 --skip-generated
+# Fix a folder based on its immediate contents (system files auto-excluded)
+mod_fldr_dt.py C:\Projects --depth 0
 
 # Preview what would change without applying
-mod_fldr_dt.py C:\Projects --depth 0 --skip-generated --dry-run
+mod_fldr_dt.py C:\Projects --depth 0 --dry-run
+
+# Include system files in timestamp calculation (not recommended)
+mod_fldr_dt.py C:\Projects --depth 0 --include-generated
 ```
 
 ### Fix all subfolders
 ```bash
-# Fix all immediate subfolders
-mod_fldr_dt.py C:\Projects --depth 1 --strategy shallow --skip-generated
+# Fix all immediate subfolders (system files auto-excluded)
+mod_fldr_dt.py C:\Projects --depth 1 --strategy shallow
 
 # Fix with deep scanning (looks at entire subtree)
-mod_fldr_dt.py C:\Projects --depth 1 --strategy deep --skip-generated
+mod_fldr_dt.py C:\Projects --depth 1 --strategy deep
 ```
 
 ### Convenience shortcuts
 ```bash
-# Fix everything (alias for --depth 0 --depth 1 --strategy deep)
-mod_fldr_dt.py C:\Projects --fix-all --skip-generated
+# Fix folder and immediate children (alias for --depth 0 --depth 1 --strategy deep)
+mod_fldr_dt.py C:\Projects --fix-2
 
-# Fix entire tree recursively
-mod_fldr_dt.py C:\Projects --fix-tree --skip-generated
+# Fix entire tree recursively (alias for --depth infinite --strategy deep)
+mod_fldr_dt.py C:\Projects --fix-all
 
 # Fix only immediate subfolders
-mod_fldr_dt.py C:\Projects --fix-immediate --skip-generated
+mod_fldr_dt.py C:\Projects --fix-immediate
 ```
 
 ### Network paths
 ```bash
 # UNC paths - use forward slashes (recommended)
-mod_fldr_dt.py //server/share/projects --fix-all --skip-generated
+mod_fldr_dt.py //server/share/projects --fix-all
 
-# UNC paths - or properly escape backslashes in shell
-mod_fldr_dt.py \\\\server\\share\\projects --fix-all --skip-generated
+# UNC paths - use --unc-path for easy copy-paste from Windows
+mod_fldr_dt.py --unc-path "\\server\share\projects" --fix-all
 
 # Works with mapped drives
-mod_fldr_dt.py Z:\team-projects --depth 1 --skip-generated
+mod_fldr_dt.py Z:\team-projects --depth 1
 
 # Note: Single backslash paths like \server\share are ambiguous and will show a warning
 ```
@@ -100,7 +103,7 @@ mod_fldr_dt.py Z:\team-projects --depth 1 --skip-generated
 |--------|-------|-------------|
 | `--depth N` | `-d N` | Process folders at depth N (can be specified multiple times) |
 | `--strategy` | `-s` | Timestamp calculation strategy: shallow, deep, or smart |
-| `--skip-generated` | `-sg` | Skip system-generated files like thumbs.db |
+| `--include-generated` | `-ig` | Include system-generated files (normally skipped) |
 | `--dry-run` | `-n` | Preview changes without applying them |
 | `--verbose` | `-v` | Show detailed output |
 | `--quiet` | `-q` | Suppress output except errors |
@@ -130,9 +133,11 @@ C:\Projects\              <- depth 0
 - **deep**: Sets folder timestamp based on newest file in entire subtree
 - **smart**: Automatically chooses based on folder structure
 
-## System Files Excluded
+## System Files Handling
 
-When using `--skip-generated`, these files are ignored:
+By default, system-generated files are automatically excluded from timestamp calculations. Use `--include-generated` if you need to include them.
+
+System files automatically skipped:
 
 - Windows: `thumbs.db`, `desktop.ini`, `IconCache.db`
 - macOS: `.DS_Store`, `.localized`, `._*` files
@@ -147,22 +152,22 @@ When using `--skip-generated`, these files are ignored:
 ```bash
 # Your project folders are showing wrong dates because of thumbs.db
 # This will fix all project folders to show actual last modification dates
-mod_fldr_dt.py "C:\Users\YourName\Documents\Projects" --fix-all --skip-generated
+mod_fldr_dt.py "C:\Users\YourName\Documents\Projects" --fix-2
 
-# Check what would be fixed first
-mod_fldr_dt.py "C:\Users\YourName\Documents\Projects" --fix-all --skip-generated --dry-run --verbose
+# Check what would be fixed first (always recommended)
+mod_fldr_dt.py "C:\Users\YourName\Documents\Projects" --fix-2 --dry-run --verbose
 ```
 
 ### Network share cleanup
 ```bash
 # Fix team folders on network share, save report
-mod_fldr_dt.py "\\fileserver\team\projects" --depth 1 --strategy deep --skip-generated --report "fixes.txt"
+mod_fldr_dt.py --unc-path "\\fileserver\team\projects" --depth 1 --strategy deep --report "fixes.txt"
 ```
 
 ### Recursive fix with max depth
 ```bash
 # Fix everything up to 3 levels deep
-mod_fldr_dt.py C:\Work --fix-tree --max-depth 3 --skip-generated
+mod_fldr_dt.py C:\Work --fix-all --max-depth 3
 ```
 
 ## Development

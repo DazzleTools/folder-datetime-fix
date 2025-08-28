@@ -155,29 +155,29 @@ def main():
     # Note: We test at depth 1 to process the test folders (level0_empty, etc.)
     test_configs = [
         {
-            'name': 'Shallow without Skip',
-            'args': ['--depth', '1', '--strategy', 'shallow'],
+            'name': 'Shallow with Include Generated',
+            'args': ['--depth', '1', '--strategy', 'shallow', '--include-generated'],
             'expectations': expectations['shallow_no_skip']
         },
         {
-            'name': 'Shallow with Skip Generated',
-            'args': ['--depth', '1', '--strategy', 'shallow', '--skip-generated'],
+            'name': 'Shallow with Default (Skip Generated)',
+            'args': ['--depth', '1', '--strategy', 'shallow'],
             'expectations': expectations['shallow_skip_generated']
         },
         {
-            'name': 'Deep without Skip',
-            'args': ['--depth', '1', '--strategy', 'deep'],
+            'name': 'Deep with Include Generated',
+            'args': ['--depth', '1', '--strategy', 'deep', '--include-generated'],
             'expectations': expectations['deep_no_skip']
         },
         {
-            'name': 'Deep with Skip Generated',
-            'args': ['--depth', '1', '--strategy', 'deep', '--skip-generated'],
+            'name': 'Deep with Default (Skip Generated)',
+            'args': ['--depth', '1', '--strategy', 'deep'],
             'expectations': expectations['deep_skip_generated']
         },
         {
-            'name': 'Fix All (Convenience Alias)',
-            'args': ['--fix-all', '--skip-generated'],
-            'expectations': expectations['deep_skip_generated']  # Should behave like deep
+            'name': 'Fix-2 (Convenience Alias)',
+            'args': ['--fix-2'],
+            'expectations': expectations['deep_skip_generated']  # fix-2 uses deep strategy, skips by default
         },
     ]
     

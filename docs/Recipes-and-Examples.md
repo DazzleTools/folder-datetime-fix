@@ -16,8 +16,8 @@ This guide provides real-world examples and best practices for using the folder 
 Before making any changes, ALWAYS test with `--dry-run` to preview what will be modified:
 
 ```bash
-# Preview changes without applying them
-python mod_fldr_dt.py "C:\Projects" --depth 1 --skip-generated --dry-run
+# Preview changes without applying them (system files auto-skipped)
+python mod_fldr_dt.py "C:\Projects" --depth 1 --dry-run
 ```
 
 ### Basic Workflow
@@ -34,7 +34,7 @@ This real example shows fixing folders corrupted by thumbs.db on a network share
 
 ```bash
 # Step 1: Preview what will change (DRY RUN)
-python mod_fldr_dt.py --unc-path "\\server\projects\current-work" --fix-all --skip-generated --dry-run
+python mod_fldr_dt.py --unc-path "\\server\projects\current-work" --fix-all --dry-run
 
 # Expected output:
 ==================================================
@@ -44,7 +44,7 @@ Target:        \\server\projects\current-work
 Type:          UNC Network Path
 Depths:        [0, 1]
 Strategy:      deep
-Skip System:   True
+System Files:  SKIPPED (default)
 Mode:          DRY RUN
 ==================================================
 
@@ -75,7 +75,7 @@ Once you've reviewed and are satisfied with the preview:
 
 ```bash
 # Apply the changes for real
-python mod_fldr_dt.py --unc-path "\\server\projects\current-work" --fix-all --skip-generated
+python mod_fldr_dt.py --unc-path "\\server\projects\current-work" --fix-all
 
 # Output will be similar but show:
 Mode:          EXECUTE
@@ -108,8 +108,7 @@ python mod_fldr_dt.py "Z:\projects" --fix-all --skip-generated --dry-run
 python mod_fldr_dt.py "%USERPROFILE%\Documents" --depth 1 --skip-generated --dry-run --verbose
 
 # Step 2: Apply fixes to immediate subfolders only
-python mod_fldr_dt.py "%USERPROFILE%\Documents" --depth 1 --skip-generated
-
+python mod_fldr_dt.py "%USERPROFILE%\Documents" --depth 1 
 # Step 3: Verify the changes
 dir "%USERPROFILE%\Documents" /OD
 ```
@@ -117,17 +116,15 @@ dir "%USERPROFILE%\Documents" /OD
 ### Fix Deep Project Structure
 ```bash
 # Fix a project and all its subfolders (max 5 levels deep)
-python mod_fldr_dt.py "C:\code\my-project" --fix-tree --max-depth 5 --skip-generated --dry-run
+python mod_fldr_dt.py "C:\code\my-project" --fix-all --max-depth 5 --skip-generated --dry-run
 
 # If preview looks good, run for real
-python mod_fldr_dt.py "C:\code\my-project" --fix-tree --max-depth 5 --skip-generated
-```
+python mod_fldr_dt.py "C:\code\my-project" --fix-all --max-depth 5 ```
 
 ### Fix Only the Root Folder
 ```bash
 # Sometimes you only want to fix the top-level folder
-python mod_fldr_dt.py "C:\Projects" --depth 0 --skip-generated
-```
+python mod_fldr_dt.py "C:\Projects" --depth 0 ```
 
 ## Understanding Output
 
@@ -160,8 +157,7 @@ Your photo folders show "modified today" because of thumbs.db:
 ```bash
 # Fix all year folders to show when photos were actually added
 python mod_fldr_dt.py "D:\Photos" --depth 1 --skip-generated --dry-run
-python mod_fldr_dt.py "D:\Photos" --depth 1 --skip-generated
-```
+python mod_fldr_dt.py "D:\Photos" --depth 1 ```
 
 ### Scenario 2: Development Projects
 Project folders corrupted by .vs, node_modules cache, etc:
@@ -178,18 +174,17 @@ Fix corruption on network drive without affecting deep structure:
 ```bash
 # Only fix the immediate team folders
 python mod_fldr_dt.py --unc-path "\\fileserver\teams" --fix-immediate --skip-generated --dry-run
-python mod_fldr_dt.py --unc-path "\\fileserver\teams" --fix-immediate --skip-generated
-```
+python mod_fldr_dt.py --unc-path "\\fileserver\teams" --fix-immediate ```
 
 ### Scenario 4: Complete Cleanup
 Fix everything in a directory tree:
 
 ```bash
 # Careful - this processes everything!
-python mod_fldr_dt.py "C:\Work" --fix-tree --skip-generated --report cleanup.txt --dry-run
+python mod_fldr_dt.py "C:\Work" --fix-all --skip-generated --report cleanup.txt --dry-run
 
 # Review the report file, then run if satisfied
-python mod_fldr_dt.py "C:\Work" --fix-tree --skip-generated --report cleanup-applied.txt
+python mod_fldr_dt.py "C:\Work" --fix-all --skip-generated --report cleanup-applied.txt
 ```
 
 ## Troubleshooting
@@ -202,11 +197,9 @@ dir "\\server\share"
 # If it works in dir but not in tool, try:
 # 1. Map to drive letter first
 net use Y: \\server\share
-python mod_fldr_dt.py "Y:\" --fix-all --skip-generated
-
+python mod_fldr_dt.py "Y:\" --fix-all 
 # 2. Use forward slashes
-python mod_fldr_dt.py "//server/share" --fix-all --skip-generated
-```
+python mod_fldr_dt.py "//server/share" --fix-all ```
 
 ### "Permission denied" Errors
 ```bash
@@ -231,9 +224,7 @@ Network operations are naturally slower. For large structures:
 
 ```bash
 # Process in smaller chunks
-python mod_fldr_dt.py --unc-path "\\server\share\part1" --fix-all --skip-generated
-python mod_fldr_dt.py --unc-path "\\server\share\part2" --fix-all --skip-generated
-```
+python mod_fldr_dt.py --unc-path "\\server\share\part1" --fix-all python mod_fldr_dt.py --unc-path "\\server\share\part2" --fix-all ```
 
 ## Best Practices
 
@@ -251,7 +242,7 @@ python mod_fldr_dt.py "C:\Projects" --depth 1 --skip-generated --dry-run --verbo
 
 ### 3. Save Reports for Large Operations
 ```bash
-python mod_fldr_dt.py "D:\Archive" --fix-tree --skip-generated --report "archive-fix-$(date +%Y%m%d).txt" --dry-run
+python mod_fldr_dt.py "D:\Archive" --fix-all --skip-generated --report "archive-fix-$(date +%Y%m%d).txt" --dry-run
 ```
 
 ### 4. Test on Small Subset First

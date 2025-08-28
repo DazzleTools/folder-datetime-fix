@@ -24,7 +24,7 @@ MAX_DEPTH_INFINITE = 100  # Reasonable maximum for "infinite" depth
 def parse_arguments(argv=None):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description='Fix folder modified timestamps to match their content',
+        description='Fix folder modified timestamps to match their content (system files skipped by default)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -34,12 +34,15 @@ Examples:
   %(prog)s C:\\Projects --depth infinite             # Fix entire tree (all depths)
   %(prog)s C:\\Projects --fix-2                      # Fix folder + immediate children
   %(prog)s \\\\server\\share --fix-all                # Fix entire tree recursively
-  %(prog)s . --fix-all --skip-generated            # Fix all with system files skipped
+  %(prog)s . --fix-all --include-generated         # Fix all INCLUDING system files
   %(prog)s C:\\Work --depth 2 --dry-run --verbose   # Preview changes at depth 2
 
 Quick Start for Network Shares:
-  %(prog)s --unc-path "\\\\server\\folder" --fix-2 --skip-generated --dry-run
-  # Preview fixes for folder AND immediate subfolders, then remove --dry-run to apply
+  %(prog)s --unc-path "\\\\server\\folder" --fix-2 --dry-run
+  # Preview fixes for folder AND immediate subfolders (system files auto-skipped)
+
+For more detailed help on specific topics:
+  %(prog)s --help strategy    # Detailed explanation of shallow/deep/smart strategies
         """
     )
     
@@ -83,9 +86,9 @@ Quick Start for Network Shares:
                        help='Alias for: --depth 1 --strategy shallow')
     
     # System file handling
-    parser.add_argument('--skip-generated', '-sg',
+    parser.add_argument('--include-generated', '-ig',
                        action='store_true',
-                       help='Skip system-generated files (thumbs.db, desktop.ini, etc.)')
+                       help='Include system-generated files like thumbs.db, desktop.ini (normally skipped)')
     
     # Execution modes
     parser.add_argument('--dry-run', '-n',
@@ -191,7 +194,7 @@ def print_summary(stats: dict, verbose: bool = False):
 def main():
     """Main entry point."""
     # Check for special help commands first
-    if len(sys.argv) >= 3 and sys.argv[1] == '--help' and sys.argv[2] in ['strategy', 'strategies']:
+    if len(sys.argv) >= 3 and sys.argv[1] == '--help' and sys.argv[2] == 'strategy':
         print_strategy_help()
         return 0
     
@@ -242,7 +245,7 @@ def main():
             print(f"Type:          Substituted Drive")
         print(f"Depths:        {args.depths}")
         print(f"Strategy:      {args.strategy}")
-        print(f"Skip System:   {args.skip_generated}")
+        print(f"System Files:  {'INCLUDED' if args.include_generated else 'SKIPPED (default)'}")
         print(f"Mode:          {'DRY RUN' if args.dry_run else 'EXECUTE'}")
         if is_network and unc_handler.unctools_available:
             print(f"UNCtools:      Enabled")
@@ -250,7 +253,9 @@ def main():
         print()
     
     # Initialize components
-    scanner = FolderScanner(skip_generated=args.skip_generated)
+    # Default behavior is to skip system files unless --include-generated is specified
+    skip_system_files = not args.include_generated
+    scanner = FolderScanner(skip_generated=skip_system_files)
     fixer = TimestampFixer(dry_run=args.dry_run, verbose=args.verbose and not args.quiet)
     
     # Perform scanning
