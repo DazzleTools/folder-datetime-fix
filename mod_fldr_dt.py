@@ -16,8 +16,8 @@ from folder_scanner import FolderScanner
 from timestamp_fixer import TimestampFixer
 from unc_handler import get_unc_handler
 from strategy_help import print_strategy_help
+from version import __version__, get_base_version
 
-__version__ = '0.5.0'
 MAX_DEPTH_INFINITE = 100  # Reasonable maximum for "infinite" depth
 
 
