@@ -14,11 +14,25 @@ REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 UPDATE_SCRIPT="$REPO_ROOT/scripts/update-version.sh"
 if [ -f "$UPDATE_SCRIPT" ]; then
     # Run in auto mode to update version before commit
-    "$UPDATE_SCRIPT" --auto > /dev/null 2>&1
-    if [ $? -eq 0 ]; then
-        echo "✓ Version updated for commit"
+    # Capture output to check if it's just "already up to date"
+    UPDATE_OUTPUT=$("$UPDATE_SCRIPT" --auto 2>&1)
+    UPDATE_EXIT=$?
+    
+    if [ $UPDATE_EXIT -eq 0 ]; then
+        # Success - either updated or already current
+        # Check if version.py was actually modified
+        if git diff --cached --name-only | grep -q "version.py"; then
+            echo "✓ Version updated for commit"
+        else
+            # No changes to version.py - it was already up to date
+            # This is fine, just silent success
+            :
+        fi
     else
+        # Real error occurred
         echo "⚠ Warning: Version update failed but continuing"
+        # Optionally show the error in verbose mode
+        # echo "  Error: $UPDATE_OUTPUT"
     fi
 fi
 
