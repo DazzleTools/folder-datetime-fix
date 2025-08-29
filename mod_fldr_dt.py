@@ -17,10 +17,12 @@ from timestamp_fixer import TimestampFixer
 from unc_handler import get_unc_handler
 from strategy_help import print_strategy_help
 from version import __version__, get_base_version
+from trace_utils import trace, set_verbosity
 
 MAX_DEPTH_INFINITE = 100  # Reasonable maximum for "infinite" depth
 
 
+@trace
 def parse_arguments(argv=None):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
@@ -35,7 +37,7 @@ Examples:
   %(prog)s C:\\Projects --fix-2                      # Fix folder + immediate children
   %(prog)s \\\\server\\share --fix-all                # Fix entire tree recursively
   %(prog)s . --fix-all --include-generated         # Fix all INCLUDING system files
-  %(prog)s C:\\Work --depth 2 --dry-run --verbose   # Preview changes at depth 2
+  %(prog)s C:\\Work --depth 2 --dry-run -v          # Preview changes at depth 2
 
 Quick Start for Network Shares:
   %(prog)s --unc-path "\\\\server\\folder" --fix-2 --dry-run
@@ -47,7 +49,7 @@ For more detailed help on specific topics:
     )
     
     # Version information
-    parser.add_argument('--version', '-v',
+    parser.add_argument('--version', '-V',
                        action='version',
                        version=f'%(prog)s {__version__}',
                        help='Show program version and exit')
@@ -95,9 +97,10 @@ For more detailed help on specific topics:
                        action='store_true',
                        help='Preview changes without applying them')
     
-    parser.add_argument('--verbose', '-V',
-                       action='store_true',
-                       help='Show detailed output')
+    parser.add_argument('--verbose', '-v',
+                       action='count',
+                       default=0,
+                       help='Increase verbosity (-v=basic, -vv=detailed, -vvv=debug, -vvvv=trace)')
     
     parser.add_argument('--quiet', '-q',
                        action='store_true',
@@ -162,12 +165,13 @@ For more detailed help on specific topics:
     args.depths = sorted(set(args.depths))
     
     # Validate quiet and verbose aren't both set
-    if args.quiet and args.verbose:
+    if args.quiet and args.verbose > 0:
         parser.error("--quiet and --verbose are mutually exclusive")
     
     return args
 
 
+@trace
 def format_timestamp(dt: datetime) -> str:
     """Format a datetime for display."""
     if dt:
@@ -175,6 +179,7 @@ def format_timestamp(dt: datetime) -> str:
     return 'N/A'
 
 
+@trace
 def print_summary(stats: dict, verbose: bool = False):
     """Print execution summary."""
     print("\n" + "=" * 50)
@@ -191,6 +196,7 @@ def print_summary(stats: dict, verbose: bool = False):
     print("=" * 50)
 
 
+@trace
 def main():
     """Main entry point."""
     # Check for special help commands first
@@ -199,6 +205,9 @@ def main():
         return 0
     
     args = parse_arguments()
+    
+    # Set global verbosity for tracing
+    set_verbosity(args.verbose if not args.quiet else 0)
     
     # Determine which path to use
     if args.unc_path:
@@ -212,7 +221,7 @@ def main():
         return 1
     
     # Initialize UNC handler for network path support
-    unc_handler = get_unc_handler(verbose=args.verbose and not args.quiet)
+    unc_handler = get_unc_handler(verbose=args.verbose > 0 and not args.quiet)
     
     # Convert and normalize path using UNC handler
     target_path, is_network = unc_handler.convert_for_processing(path_to_use)
@@ -255,8 +264,9 @@ def main():
     # Initialize components
     # Default behavior is to skip system files unless --include-generated is specified
     skip_system_files = not args.include_generated
-    scanner = FolderScanner(skip_generated=skip_system_files)
-    fixer = TimestampFixer(dry_run=args.dry_run, verbose=args.verbose and not args.quiet)
+    verbosity = args.verbose if not args.quiet else 0
+    scanner = FolderScanner(skip_generated=skip_system_files, verbose=verbosity)
+    fixer = TimestampFixer(dry_run=args.dry_run, verbose=verbosity)
     
     # Perform scanning
     if not args.quiet:
@@ -280,7 +290,7 @@ def main():
     
     # Print summary
     if not args.quiet:
-        print_summary(stats, args.verbose)
+        print_summary(stats, args.verbose > 0)
     
     # Save report if requested
     if args.report:
@@ -292,7 +302,7 @@ def main():
     # Print errors if any occurred
     if fixer.errors and not args.quiet:
         print("\n⚠️ Some folders could not be processed. Check permissions.")
-        if args.verbose:
+        if args.verbose > 0:
             print("\nDetailed errors:")
             for error in fixer.errors:
                 print(f"  - {error['path']}: {error['error']}")

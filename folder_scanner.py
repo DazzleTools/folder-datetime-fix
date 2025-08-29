@@ -7,20 +7,24 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Set, Tuple
 from system_files import is_system_generated
+from trace_utils import trace
 
 
 class FolderScanner:
     """Scans folders and collects timestamp information based on depth and strategy."""
     
-    def __init__(self, skip_generated: bool = False):
+    def __init__(self, skip_generated: bool = False, verbose: int = 0):
         """
         Initialize the scanner.
         
         Args:
             skip_generated: If True, exclude system-generated files from timestamp calculation
+            verbose: Verbosity level (0=quiet, 1=basic, 2=detailed, 3=debug, 4=trace)
         """
         self.skip_generated = skip_generated
+        self.verbose = verbose
     
+    @trace
     def get_folders_at_depth(self, base_path: Path, depth: int) -> List[Path]:
         """
         Get all folders at a specific depth from the base path.
@@ -56,6 +60,7 @@ class FolderScanner:
         _traverse(base_path, 0)
         return sorted(folders)
     
+    @trace
     def get_shallow_timestamp(self, folder_path: Path) -> Optional[datetime]:
         """
         Get the most recent timestamp from immediate children only.
@@ -98,6 +103,7 @@ class FolderScanner:
         
         return latest_time
     
+    @trace
     def get_deep_timestamp(self, folder_path: Path) -> Optional[datetime]:
         """
         Get the most recent timestamp from entire subtree.
@@ -151,6 +157,7 @@ class FolderScanner:
         _scan_recursive(folder_path)
         return latest_time
     
+    @trace
     def get_smart_timestamp(self, folder_path: Path) -> Optional[datetime]:
         """
         Use heuristics to decide between shallow and deep scanning.
@@ -182,6 +189,7 @@ class FolderScanner:
         else:
             return self.get_shallow_timestamp(folder_path)
     
+    @trace
     def scan_and_collect(self, base_path: Path, depths: List[int], 
                         strategy: str = 'shallow') -> List[Tuple[Path, Optional[datetime]]]:
         """
@@ -198,13 +206,26 @@ class FolderScanner:
         results = []
         processed = set()  # Avoid processing same folder twice
         
+        if self.verbose >= 3:
+            print(f"Scanning with strategy: {strategy}")
+            print(f"Processing depths: {depths}")
+        
         for depth in sorted(depths):
+            if self.verbose >= 2:
+                print(f"Scanning at depth {depth}...")
+            
             folders = self.get_folders_at_depth(base_path, depth)
+            
+            if self.verbose >= 2:
+                print(f"Found {len(folders)} folders at depth {depth}")
             
             for folder in folders:
                 if folder in processed:
                     continue
                 processed.add(folder)
+                
+                if self.verbose >= 3:
+                    print(f"Processing: {folder}")
                 
                 # Get timestamp based on strategy
                 if strategy == 'shallow':

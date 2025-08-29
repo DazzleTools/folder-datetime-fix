@@ -6,24 +6,26 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple, Optional
+from trace_utils import trace
 
 
 class TimestampFixer:
     """Applies timestamp changes to folders."""
     
-    def __init__(self, dry_run: bool = False, verbose: bool = False):
+    def __init__(self, dry_run: bool = False, verbose: int = 0):
         """
         Initialize the fixer.
         
         Args:
             dry_run: If True, preview changes without applying them
-            verbose: If True, provide detailed output
+            verbose: Verbosity level (0=quiet, 1=basic, 2=detailed, 3=debug, 4=trace)
         """
         self.dry_run = dry_run
         self.verbose = verbose
         self.changes_made = []
         self.errors = []
     
+    @trace
     def fix_folder_timestamp(self, folder_path: Path, new_timestamp: datetime) -> bool:
         """
         Apply new timestamp to a folder.
@@ -43,7 +45,7 @@ class TimestampFixer:
             
             # Check if change is needed
             if abs((current_mtime - new_timestamp).total_seconds()) < 1:
-                if self.verbose:
+                if self.verbose >= 2:
                     print(f"No change needed for {folder_path}")
                 return True
             
@@ -54,10 +56,13 @@ class TimestampFixer:
                     'new_time': new_timestamp,
                     'applied': False
                 })
-                if self.verbose:
-                    print(f"[DRY RUN] Would change {folder_path}:")
-                    print(f"  From: {current_mtime.strftime('%Y-%m-%d %H:%M:%S')}")
-                    print(f"  To:   {new_timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+                if self.verbose >= 1:
+                    if self.verbose >= 2:
+                        print(f"[DRY RUN] Would change {folder_path}:")
+                        print(f"  From: {current_mtime.strftime('%Y-%m-%d %H:%M:%S')}")
+                        print(f"  To:   {new_timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+                    else:
+                        print(f"[DRY RUN] Would change {folder_path}")
             else:
                 # Apply the new timestamp
                 timestamp_seconds = new_timestamp.timestamp()
@@ -71,27 +76,31 @@ class TimestampFixer:
                     'applied': True
                 })
                 
-                if self.verbose:
-                    print(f"Changed {folder_path}:")
-                    print(f"  From: {current_mtime.strftime('%Y-%m-%d %H:%M:%S')}")
-                    print(f"  To:   {new_timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+                if self.verbose >= 1:
+                    if self.verbose >= 2:
+                        print(f"Changed {folder_path}:")
+                        print(f"  From: {current_mtime.strftime('%Y-%m-%d %H:%M:%S')}")
+                        print(f"  To:   {new_timestamp.strftime('%Y-%m-%d %H:%M:%S')}")
+                    else:
+                        print(f"Changed {folder_path}")
             
             return True
             
         except PermissionError as e:
             error_msg = f"Permission denied: {folder_path}"
             self.errors.append({'path': folder_path, 'error': error_msg})
-            if self.verbose:
+            if self.verbose >= 1:
                 print(f"ERROR: {error_msg}")
             return False
         
         except Exception as e:
             error_msg = f"Error fixing {folder_path}: {str(e)}"
             self.errors.append({'path': folder_path, 'error': error_msg})
-            if self.verbose:
+            if self.verbose >= 1:
                 print(f"ERROR: {error_msg}")
             return False
     
+    @trace
     def process_scan_results(self, scan_results: List[Tuple[Path, Optional[datetime]]]) -> dict:
         """
         Process scan results and apply timestamp fixes.
@@ -110,11 +119,16 @@ class TimestampFixer:
             'empty_folders': 0
         }
         
-        for folder_path, new_timestamp in scan_results:
+        if self.verbose >= 1 and len(scan_results) > 0:
+            print(f"Processing {len(scan_results)} folders...")
+        
+        for idx, (folder_path, new_timestamp) in enumerate(scan_results, 1):
+            if self.verbose >= 3:
+                print(f"[{idx}/{len(scan_results)}] Checking {folder_path}")
             if new_timestamp is None:
                 # No files found in folder (empty or all system files)
                 stats['empty_folders'] += 1
-                if self.verbose:
+                if self.verbose >= 2:
                     print(f"Skipping {folder_path}: No valid files found")
                 continue
             
@@ -134,6 +148,7 @@ class TimestampFixer:
         
         return stats
     
+    @trace
     def generate_report(self) -> str:
         """
         Generate a detailed report of changes made.
@@ -177,6 +192,7 @@ class TimestampFixer:
         
         return "\n".join(report)
     
+    @trace
     def save_report(self, filepath: Path):
         """
         Save the report to a file.

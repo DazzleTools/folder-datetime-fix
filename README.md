@@ -101,15 +101,16 @@ mod_fldr_dt.py Z:\team-projects --depth 1
 
 | Option | Short | Description |
 |--------|-------|-------------|
+| `--version` | `-V` | Show version information |
 | `--depth N` | `-d N` | Process folders at depth N (can be specified multiple times) |
 | `--strategy` | `-s` | Timestamp calculation strategy: shallow, deep, or smart |
 | `--include-generated` | `-ig` | Include system-generated files (normally skipped) |
 | `--dry-run` | `-n` | Preview changes without applying them |
-| `--verbose` | `-v` | Show detailed output |
+| `--verbose` | `-v` | Increase verbosity (-v=basic, -vv=detailed, -vvv=debug, -vvvv=trace) |
 | `--quiet` | `-q` | Suppress output except errors |
 | `--report FILE` | `-r FILE` | Save detailed report to file |
-| `--fix-all` | | Convenience: Fix base and immediate subfolders deeply |
-| `--fix-tree` | | Convenience: Fix entire tree recursively |
+| `--fix-2` | | Convenience: Fix folder and immediate children |
+| `--fix-all` | | Convenience: Fix entire tree recursively |
 | `--fix-immediate` | | Convenience: Fix immediate subfolders only |
 
 ## Understanding Depth Levels
@@ -146,6 +147,44 @@ System files automatically skipped:
 - Version control: `.git/index`, `.svn/entries`
 - Package managers: `node_modules/.cache/`, `__pycache__/`
 
+## Version Information
+
+Check the current version with build metadata:
+
+```bash
+mod_fldr_dt.py --version
+mod_fldr_dt.py -V
+# Output: mod_fldr_dt.py 0.5.1_branch_build-20250828-commithash
+```
+
+The version format includes:
+- Semantic version (MAJOR.MINOR.PATCH)
+- Git branch name
+- Build number (commit count)
+- Date (YYYYMMDD)
+- Short commit hash
+
+## Verbose Mode
+
+The tool provides progressive verbosity levels for debugging and monitoring:
+
+- **`-v`** (basic): Shows folders being processed and basic progress
+- **`-vv`** (detailed): Shows each folder's changes, skipped folders, and timestamps
+- **`-vvv`** (debug): Shows scanning strategy, folder discovery at each depth, and progress counters
+- **`-vvvv`** (trace): Shows complete function call trace with arguments and return values
+
+Example usage:
+```bash
+# See basic progress
+mod_fldr_dt.py C:\Projects --fix-2 --dry-run -v
+
+# Debug why a folder isn't being fixed
+mod_fldr_dt.py C:\Projects --depth 1 --dry-run -vvv
+
+# Full trace for troubleshooting
+mod_fldr_dt.py C:\Projects --depth 0 --dry-run -vvvv
+```
+
 ## Examples
 
 ### Real-world scenario
@@ -155,7 +194,7 @@ System files automatically skipped:
 mod_fldr_dt.py "C:\Users\YourName\Documents\Projects" --fix-2
 
 # Check what would be fixed first (always recommended)
-mod_fldr_dt.py "C:\Users\YourName\Documents\Projects" --fix-2 --dry-run --verbose
+mod_fldr_dt.py "C:\Users\YourName\Documents\Projects" --fix-2 --dry-run -v
 ```
 
 ### Network share cleanup

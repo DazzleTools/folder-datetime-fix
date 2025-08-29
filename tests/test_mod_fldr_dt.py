@@ -67,7 +67,7 @@ def compare_timestamps(expected: datetime, actual: datetime, tolerance_seconds: 
     return diff <= tolerance_seconds
 
 
-def test_strategy(test_base: Path, strategy_name: str, args: list, expectations: dict):
+def run_strategy_test(test_base: Path, strategy_name: str, args: list, expectations: dict):
     """
     Test a specific strategy configuration.
     

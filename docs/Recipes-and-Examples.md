@@ -105,7 +105,7 @@ python mod_fldr_dt.py "Z:\projects" --fix-all --skip-generated --dry-run
 ### Fix Your Documents Folder
 ```bash
 # Step 1: Preview (see what system files are affecting timestamps)
-python mod_fldr_dt.py "%USERPROFILE%\Documents" --depth 1 --skip-generated --dry-run --verbose
+python mod_fldr_dt.py "%USERPROFILE%\Documents" --depth 1 --dry-run -v
 
 # Step 2: Apply fixes to immediate subfolders only
 python mod_fldr_dt.py "%USERPROFILE%\Documents" --depth 1 
@@ -213,7 +213,7 @@ icacls "C:\path\to\folder"
 ### Nothing Changes
 ```bash
 # Check if system files are newer than user files
-python mod_fldr_dt.py "C:\folder" --depth 0 --verbose --dry-run
+python mod_fldr_dt.py "C:\folder" --depth 0 -v --dry-run
 
 # Try without --skip-generated to see all files
 python mod_fldr_dt.py "C:\folder" --depth 0 --dry-run
@@ -235,14 +235,24 @@ python mod_fldr_dt.py [path] [options] --dry-run  # ALWAYS FIRST
 python mod_fldr_dt.py [path] [options]             # After review
 ```
 
-### 2. Use --verbose for Diagnostics
+### 2. Use -v for Diagnostics (Multiple Verbosity Levels)
 ```bash
-python mod_fldr_dt.py "C:\Projects" --depth 1 --skip-generated --dry-run --verbose
+# Basic progress (shows folders being processed)
+python mod_fldr_dt.py "C:\Projects" --depth 1 --dry-run -v
+
+# Detailed folder info (shows each folder and changes)
+python mod_fldr_dt.py "C:\Projects" --depth 1 --dry-run -vv
+
+# Debug output (shows scanning strategy and folder discovery)
+python mod_fldr_dt.py "C:\Projects" --depth 1 --dry-run -vvv
+
+# Full trace (shows every function call with arguments)
+python mod_fldr_dt.py "C:\Projects" --depth 1 --dry-run -vvvv
 ```
 
 ### 3. Save Reports for Large Operations
 ```bash
-python mod_fldr_dt.py "D:\Archive" --fix-all --skip-generated --report "archive-fix-$(date +%Y%m%d).txt" --dry-run
+python mod_fldr_dt.py "D:\Archive" --fix-all --report "archive-fix-$(date +%Y%m%d).txt" --dry-run
 ```
 
 ### 4. Test on Small Subset First
