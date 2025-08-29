@@ -219,13 +219,17 @@ class FolderScanner:
             if self.verbose >= 2:
                 print(f"Found {len(folders)} folders at depth {depth}")
             
-            for folder in folders:
+            for idx, folder in enumerate(folders, 1):
                 if folder in processed:
                     continue
                 processed.add(folder)
                 
                 if self.verbose >= 3:
                     print(f"Processing: {folder}")
+                elif self.verbose >= 2 and len(folders) > 10:
+                    # Show progress for large folder sets
+                    if idx % 10 == 0 or idx == len(folders):
+                        print(f"  Progress: {idx}/{len(folders)} folders processed...")
                 
                 # Get timestamp based on strategy
                 if strategy == 'shallow':

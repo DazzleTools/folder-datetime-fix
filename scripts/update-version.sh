@@ -71,13 +71,16 @@ else
 fi
 
 # Configuration
-SOURCE_FILE="version.py"
+SOURCE_FILE="folder_datetime_fix/version.py"
 
 # Check if we're in the right directory
 if [ ! -f "$SOURCE_FILE" ]; then
     # Try from scripts directory
     if [ -f "../$SOURCE_FILE" ]; then
         cd ..
+    elif [ -f "../folder_datetime_fix/version.py" ]; then
+        cd ..
+        SOURCE_FILE="folder_datetime_fix/version.py"
     else
         echo -e "${RED}Error:${NC} $SOURCE_FILE not found"
         echo "Please run from the project root directory"

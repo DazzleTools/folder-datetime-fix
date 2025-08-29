@@ -29,23 +29,50 @@ def parse_arguments(argv=None):
         description='Fix folder modified timestamps to match their content (system files skipped by default)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
-  %(prog)s C:\\Projects --depth 0               # Fix only Projects folder
-  %(prog)s C:\\Projects --depth 1               # Fix only immediate subfolders
-  %(prog)s C:\\Projects --depth 0 --depth 1     # Fix Projects AND immediate subfolders
-  %(prog)s C:\\Projects --depth infinite        # Fix entire tree (all depths)
-  %(prog)s C:\\Projects --fix-2                 # Fix folder + immediate children
-  %(prog)s \\\\server\\share --fix-all          # Fix entire tree recursively
-  %(prog)s . --fix-all --include-generated      # Fix all INCLUDING system files
-  %(prog)s C:\\Work --depth 2 --dry-run -v      # Preview changes at depth 2
-
 Quick Start for Network Shares:
-  %(prog)s --unc-path "\\\\server\\folder" --fix-2 --dry-run
-  # Preview fixes for folder AND immediate subfolders (system files auto-skipped)
+  {prog1:<55} # Preview all fixes (system files auto-skipped)
+  
+Basic Examples:
+  {prog2:<55} # Fix only Projects folder
+  {prog3:<55} # Fix only immediate subfolders (short: -f1)
+  {prog4:<55} # Fix Projects AND immediate subfolders
+  {prog5:<55} # Shortcut for above (folder + children)
+  {prog6:<55} # Fix entire tree recursively  
 
-For more detailed help on specific topics:
-  %(prog)s --help strategy    # Detailed explanation of shallow/deep/smart strategies
-        """
+Strategy Examples (shallow/deep/smart):
+  {prog7:<55} # Quick scan, immediate files only
+  {prog8:<55} # Full recursive scan for accuracy
+  {prog9:<55} # Auto-choose based on structure
+
+Advanced Usage:
+  {prog10:<55} # Include system files (rare)
+  {prog11:<55} # Debug output at depth 2
+  {prog12:<55} # Limit recursion depth
+
+Network Share Examples:
+  {prog13:<55} # Preview 2 level changes first
+  {prog14:<55} # UNC w/ progress info for all changes
+
+For detailed strategy explanations and performance tips:
+  {prog15:<55} # How strategies work
+  See also: docs/Recipes-and-Examples.md and docs/Performance-Optimization.md
+        """.format(
+            prog1='%(prog)s --unc-path "\\\\server\\folder" -fa --dry-run -vv',
+            prog2="%(prog)s C:\\Projects --depth 0",
+            prog3="%(prog)s C:\\Projects --depth 1",
+            prog4="%(prog)s C:\\Projects --depth 0 --depth 1",
+            prog5="%(prog)s C:\\Projects -f2",
+            prog6="%(prog)s C:\\Projects -fa",
+            prog7="%(prog)s C:\\Photos --strategy shallow",
+            prog8="%(prog)s C:\\Projects --strategy deep",
+            prog9="%(prog)s C:\\Work --strategy smart",
+            prog10="%(prog)s . -fa --include-generated",
+            prog11="%(prog)s C:\\Work --depth 2 --dry-run -vvv",
+            prog12="%(prog)s C:\\Big -fa --max-depth 3",
+            prog13="%(prog)s //server/share -f2 --dry-run",
+            prog14='%(prog)s --unc-path "\\\\server\\folder" -fa -vv',
+            prog15="%(prog)s --help strategy"
+        )
     )
     
     # Version information
@@ -75,17 +102,17 @@ For more detailed help on specific topics:
                        help='How to calculate timestamps (default: shallow)')
     
     # Convenience aliases
-    parser.add_argument('--fix-2',
+    parser.add_argument('--fix-2', '-f2',
                        action='store_true',
                        help='Fix folder and immediate children (alias for: --depth 0 --depth 1 --strategy deep)')
     
-    parser.add_argument('--fix-all',
+    parser.add_argument('--fix-all', '-fa',
                        action='store_true',
                        help='Fix entire tree recursively (alias for: --depth infinite --strategy deep)')
     
-    parser.add_argument('--fix-immediate',
+    parser.add_argument('--fix-immediate', '--fix-1', '-f1',
                        action='store_true',
-                       help='Alias for: --depth 1 --strategy shallow')
+                       help='Fix immediate subfolders only (alias for: --depth 1 --strategy shallow)')
     
     # System file handling
     parser.add_argument('--include-generated', '-ig',

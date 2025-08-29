@@ -17,13 +17,13 @@ Components:
 # Semantic version components
 MAJOR = 0
 MINOR = 5
-PATCH = 2
+PATCH = 3
 
 # Full version string - updated by git pre-commit hook
 # DO NOT EDIT THIS LINE MANUALLY
 # Note: Hash reflects the commit this version builds upon (HEAD at commit time)
 # The hash will be one commit behind after the commit is created (git limitation)
-__version__ = "0.5.2_private_13-20250828-ad442287"
+__version__ = "0.5.3_private_15-20250828-e50c0b71"
 
 
 def get_version():
