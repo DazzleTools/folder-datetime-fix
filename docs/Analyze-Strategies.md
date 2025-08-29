@@ -101,20 +101,20 @@ folder-datetime-fix /path --fix-all --analyze=auto=2.0  # Double threshold
 - Multiple operations on same tree structure
 
 ### 5. `folder-only`
-**Ultra-minimal folder structure analysis**
+**Ultra-minimal memory mode with timestamp computation**
 
-- No file scanning at all
-- Returns folder paths with `None` timestamps
-- Minimal memory usage
-- Fastest possible traversal
+- Computes timestamps without storing file objects
+- Processes files on-the-fly for each folder
+- Uses cache for efficiency
+- Minimal memory footprint
 
 **Memory usage:** ~100 bytes per folder
 
 **Use cases:**
-- Quick folder structure analysis
-- Preparing for other operations
 - Memory-constrained environments
-- When only folder paths are needed
+- Large directory trees
+- When timestamps are needed but memory is limited
+- Efficient folder-only processing
 
 ## Strategy Selection Logic
 
@@ -150,7 +150,7 @@ folder-datetime-fix /path --fix-all --analyze=auto=2.0  # Double threshold
 
 | Strategy | Memory per 10K folders | Speed | Use Case |
 |----------|------------------------|-------|----------|
-| folder-only | ~1MB | Fastest | Structure only |
+| folder-only | ~1MB | Fastest | Ultra-minimal with timestamps |
 | low-memory | <1MB | Slowest | Massive trees |
 | tree | ~2MB | Fast | Deep hierarchies |
 | standard | ~3.5MB | Fast | General use |
@@ -216,7 +216,7 @@ folder-datetime-fix /path --analyze=auto=0.5
 If you encounter memory issues:
 
 1. Use `--analyze=low-memory` to force minimal memory usage
-2. Use `--analyze=folder-only` if timestamps aren't needed
+2. Use `--analyze=folder-only` for ultra-minimal memory with timestamps
 3. Process smaller depth ranges separately
 4. Increase system swap/pagefile
 

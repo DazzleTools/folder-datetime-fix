@@ -246,29 +246,37 @@ class FolderOnlyStrategy(AnalysisStrategy):
             scanner: FolderScanner instance
         """
         super().__init__(scanner)
-        # Enable cache for storing computed timestamps
-        # But we won't store file lists, just the results
+        # Enable cache for storing computed timestamps and completeness tracking
         self.scanner.use_cache = True
+        # Ensure cache exists
+        if self.scanner.use_cache and not self.scanner.cache:
+            from .cache import SmartStreamingCache
+            self.scanner.cache = SmartStreamingCache(memory_limit_mb=100)
     
     @trace
     def analyze(self, base_path: Path, depths: List[int]) -> List[Tuple[Path, Optional[datetime]]]:
         """
         Process folders efficiently by computing timestamps on-the-fly.
         Files are processed but not stored in memory.
+        Uses cache with completeness tracking for efficiency.
         """
         import os
         from datetime import datetime
         from .system_files import is_system_generated
+        from .cache import CacheCompleteness, SmartCacheEntry
         
         results = []
         base_path = Path(base_path).resolve()
         
         # Convert depths list to a set for O(1) lookup
         depth_set = set(depths) if depths else set(range(100))
+        max_requested_depth = max(depths) if depths else 99
         
         # Track folders at each depth for statistics
         folders_by_depth = {}
         folders_with_timestamps = 0
+        cache_hits = 0
+        cache_misses = 0
         
         # Walk the tree and compute timestamps on-the-fly
         for root, dirs, files in os.walk(base_path):
@@ -287,6 +295,35 @@ class FolderOnlyStrategy(AnalysisStrategy):
                 if self.scanner.skip_generated and dirs:
                     dirs[:] = [d for d in dirs if not is_system_generated(d)]
                 continue
+            
+            # Check cache first if enabled
+            cached_used = False
+            if self.scanner.cache and root_path in self.scanner.cache.cache:
+                cached_entry = self.scanner.cache.cache[root_path]
+                
+                # Check if cache is sufficient for our needs
+                if self._is_cache_sufficient(cached_entry, current_depth, max_requested_depth):
+                    # Use cached result
+                    timestamp = datetime.fromtimestamp(cached_entry.computed_mtime) if cached_entry.computed_mtime > 0 else None
+                    results.append((root_path, timestamp))
+                    
+                    if timestamp is not None:
+                        folders_with_timestamps += 1
+                    cache_hits += 1
+                    cached_used = True
+                    
+                    # Track statistics
+                    if current_depth not in folders_by_depth:
+                        folders_by_depth[current_depth] = 0
+                    folders_by_depth[current_depth] += 1
+                    
+                    # Prune traversal if cache says complete
+                    if cached_entry.completeness == CacheCompleteness.COMPLETE:
+                        dirs.clear()
+                    continue
+            
+            if not cached_used:
+                cache_misses += 1
             
             # Filter system directories before processing
             if self.scanner.skip_generated and dirs:
@@ -330,6 +367,39 @@ class FolderOnlyStrategy(AnalysisStrategy):
             except (OSError, PermissionError):
                 pass
             
+            # Determine completeness level for this folder
+            has_subdirs = len(dirs) > 0
+            if not has_subdirs:
+                # No subdirectories means this folder is complete
+                completeness = CacheCompleteness.COMPLETE
+            elif current_depth >= max_requested_depth:
+                # At max depth, we only looked at immediate children
+                completeness = CacheCompleteness.SHALLOW
+            else:
+                # Calculate how deep we're scanning from this point
+                remaining_depth = max_requested_depth - current_depth
+                if remaining_depth >= 999:
+                    completeness = CacheCompleteness.COMPLETE
+                else:
+                    completeness = CacheCompleteness.from_depth(remaining_depth)
+            
+            # Store in cache if enabled
+            if self.scanner.cache:
+                import time
+                cache_entry = SmartCacheEntry(
+                    path=root_path,
+                    computed_mtime=max_time.timestamp() if max_time else 0,
+                    completeness=completeness,
+                    has_subdirs=has_subdirs,
+                    file_count=len(files),
+                    actual_depth=remaining_depth if current_depth < max_requested_depth else 0,
+                    computation_time=time.time()  # Track when this was computed
+                )
+                self.scanner.cache.cache[root_path] = cache_entry
+                
+                if self.scanner.verbose >= 3:
+                    print(f"  Cached {root_path.name}: completeness={completeness.name}")
+            
             # Add result with computed timestamp
             results.append((root_path, max_time))
             
@@ -342,7 +412,7 @@ class FolderOnlyStrategy(AnalysisStrategy):
             folders_by_depth[current_depth] += 1
             
             # Stop traversing deeper if we've exceeded all requested depths
-            if depths and current_depth >= max(depths):
+            if depths and current_depth >= max_requested_depth:
                 dirs.clear()
         
         # Report statistics if verbose
@@ -351,6 +421,11 @@ class FolderOnlyStrategy(AnalysisStrategy):
             print(f"FolderOnly mode: Processed {total_folders:,} folders")
             print(f"  Computed timestamps: {folders_with_timestamps:,}")
             print(f"  Without timestamps: {total_folders - folders_with_timestamps:,}")
+            if self.scanner.cache and (cache_hits + cache_misses) > 0:
+                print(f"  Cache hits: {cache_hits:,}")
+                print(f"  Cache misses: {cache_misses:,}")
+                hit_rate = (cache_hits / (cache_hits + cache_misses)) * 100
+                print(f"  Cache hit rate: {hit_rate:.1f}%")
             if self.scanner.verbose >= 2 and folders_by_depth:
                 print("Folders by depth:")
                 for depth in sorted(folders_by_depth.keys()):
@@ -358,11 +433,42 @@ class FolderOnlyStrategy(AnalysisStrategy):
         
         return results
     
+    def _is_cache_sufficient(self, cached_entry, current_depth: int, 
+                            max_requested_depth: int) -> bool:
+        """
+        Check if cached completeness is sufficient for current request.
+        """
+        from .cache import CacheCompleteness
+        
+        # Complete is always sufficient
+        if cached_entry.completeness == CacheCompleteness.COMPLETE:
+            return True
+        
+        # Beyond requested depth is always sufficient  
+        if current_depth > max_requested_depth:
+            return True
+        
+        # Check if cached depth coverage is sufficient
+        needed_depth = max_requested_depth - current_depth
+        
+        if cached_entry.completeness == CacheCompleteness.SHALLOW:
+            return needed_depth <= 1
+        elif cached_entry.completeness == CacheCompleteness.PARTIAL_2:
+            return needed_depth <= 2
+        elif cached_entry.completeness == CacheCompleteness.PARTIAL_3:
+            return needed_depth <= 3
+        elif cached_entry.completeness == CacheCompleteness.PARTIAL_N:
+            # Check actual depth if stored
+            return cached_entry.actual_depth >= needed_depth if hasattr(cached_entry, 'actual_depth') else False
+        
+        # Conservative: recompute if unsure
+        return False
+    
     def get_name(self) -> str:
         return "folder-only"
     
     def get_description(self) -> str:
-        return "Ultra-minimal mode - computes timestamps without storing files"
+        return "Ultra-minimal mode - computes timestamps without storing files, with cache completeness tracking"
 
 
 class AutoStrategy(AnalysisStrategy):

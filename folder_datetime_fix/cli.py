@@ -127,7 +127,7 @@ For detailed strategy explanations and performance tips:
     # Analysis mode
     parser.add_argument('--analyze',
                        default='auto',
-                       help='Analysis strategy: tree (full memory), low-memory (streaming), auto (adaptive), or comma-separated options like tree,ctime (default: auto)')
+                       help='Analysis strategy: tree (full memory), folder-only (minimal), low-memory (streaming), auto (adaptive), or comma-separated options like tree,ctime (default: auto)')
     
     # Debug visualization
     parser.add_argument('--visualize',
