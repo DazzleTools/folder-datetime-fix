@@ -210,6 +210,10 @@ class FolderScanner:
             print(f"Scanning with strategy: {strategy}")
             print(f"Processing depths: {depths}")
         
+        # Track consecutive empty depths for early termination
+        consecutive_empty = 0
+        max_depth_reached = -1
+        
         for depth in sorted(depths):
             if self.verbose >= 2:
                 print(f"Scanning at depth {depth}...")
@@ -218,6 +222,18 @@ class FolderScanner:
             
             if self.verbose >= 2:
                 print(f"Found {len(folders)} folders at depth {depth}")
+            
+            # Early termination optimization
+            if len(folders) == 0:
+                consecutive_empty += 1
+                # Allow one gap in case of unusual tree structure, but stop after 2 consecutive empty
+                if consecutive_empty >= 2 and depth > 0:
+                    if self.verbose >= 1:
+                        print(f"Stopping scan early - no folders found after depth {max_depth_reached}")
+                    break
+            else:
+                consecutive_empty = 0
+                max_depth_reached = depth
             
             for idx, folder in enumerate(folders, 1):
                 if folder in processed:
