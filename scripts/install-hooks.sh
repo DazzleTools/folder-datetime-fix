@@ -1,6 +1,7 @@
 #!/bin/bash
 #
 # Install git hooks for Folder DateTime Fix project
+# Provides options for basic or standard hook installation
 #
 
 set -e
@@ -36,58 +37,129 @@ echo ""
 # Check available hooks
 echo -e "${BLUE}Available hooks:${NC}"
 echo ""
-echo "This will install hooks that:"
-echo "  • post-commit: Updates version.py with actual commit hash"
-echo "  • pre-push: Runs quality checks before pushing (syntax, tests, debug checks)"
-echo "  • Format: VERSION_BRANCH_BUILD-YYYYMMDD-COMMITHASH"
-echo "  • Example: 0.5.1_main_42-20250828-a1b2c3d4"
+echo -e "${RED}⚠️  IMPORTANT SECURITY NOTICE ⚠️${NC}"
+echo "The standard hooks include CRITICAL branch protection features:"
+echo "  • Prevents committing private files to public branches"
+echo "  • Blocks secrets, credentials, and sensitive data"
+echo "  • Enforces file size limits"
+echo "  • Updates version.py automatically with correct format"
+echo ""
+echo "1. Basic hooks (version update only - NOT RECOMMENDED)"
+echo "   - pre-commit-basic: Only updates version.py"
+echo "   - NO SECURITY PROTECTION"
+echo "   - NO BRANCH PROTECTION"
+echo ""
+echo "2. Standard hooks with security (DEFAULT - RECOMMENDED)"
+echo "   - pre-commit: Full security + branch protection + version updates"
+echo "   - post-commit: Automatic version hash correction"
+echo "   - pre-push: Quality validation and test checks"
+echo "   - Protects against accidental data exposure"
+echo ""
+echo "Version format: VERSION_BRANCH_BUILD-YYYYMMDD-COMMITHASH"
+echo "Example: 0.5.4_private_21-20250829-a1b2c3d4"
 echo ""
 
-# Ask for confirmation
-echo -e "${YELLOW}Install git hooks?${NC}"
-read -p "Install? (y/N): " -n 1 -r
+# Ask which to install
+echo -e "${YELLOW}Which hooks would you like to install?${NC}"
+echo "1) Basic (version only - NO SECURITY)"
+echo -e "${GREEN}2) Standard with security (RECOMMENDED - DEFAULT)${NC}"
+echo "3) Cancel"
+echo ""
+echo -e "${GREEN}Press Enter for default (Standard with security)${NC}"
+read -p "Choice [1-3, Enter=2]: " -r
 echo ""
 
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo -e "${YELLOW}Installation cancelled${NC}"
-    exit 0
+# Default to standard if just Enter pressed
+if [ -z "$REPLY" ]; then
+    REPLY="2"
 fi
 
-# Install post-commit hook (for version updates)
-if [ -f "$HOOKS_DIR/post-commit" ]; then
-    BACKUP_NAME="$HOOKS_DIR/post-commit.backup-$(date +%Y%m%d-%H%M%S)"
-    mv "$HOOKS_DIR/post-commit" "$BACKUP_NAME"
-    echo -e "${YELLOW}Note:${NC} Backed up existing post-commit hook to $(basename $BACKUP_NAME)"
-fi
+case $REPLY in
+    1)
+        echo -e "${YELLOW}⚠️  WARNING: Installing basic hooks without security protection${NC}"
+        echo -e "${RED}This configuration does NOT protect against:${NC}"
+        echo "  • Committing private files to public branches"
+        echo "  • Exposing secrets or credentials"
+        echo "  • Large file commits"
+        echo ""
+        read -p "Are you sure you want basic hooks only? (y/N): " -n 1 -r
+        echo ""
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            echo -e "${GREEN}Good choice! Installing standard hooks instead...${NC}"
+            INSTALL_STANDARD=true
+        else
+            echo -e "${YELLOW}Installing basic hooks (NO SECURITY)...${NC}"
+            
+            # Install basic pre-commit
+            if [ -f "$SCRIPT_DIR/hooks/pre-commit-basic" ]; then
+                cp "$SCRIPT_DIR/hooks/pre-commit-basic" "$HOOKS_DIR/pre-commit"
+                chmod +x "$HOOKS_DIR/pre-commit"
+                echo -e "${GREEN}✓${NC} Installed pre-commit hook (version only)"
+                echo -e "${RED}⚠️  No security protection enabled!${NC}"
+            else
+                echo -e "${RED}Error:${NC} $SCRIPT_DIR/hooks/pre-commit-basic not found"
+                echo "Falling back to standard hooks..."
+                INSTALL_STANDARD=true
+            fi
+            INSTALL_STANDARD=false
+        fi
+        ;;
+        
+    2)
+        INSTALL_STANDARD=true
+        ;;
+        
+    3)
+        echo -e "${YELLOW}Installation cancelled${NC}"
+        exit 0
+        ;;
+        
+    *)
+        echo -e "${RED}Invalid choice${NC}"
+        exit 1
+        ;;
+esac
 
-if [ -f "$SCRIPT_DIR/hooks/post-commit" ]; then
-    cp "$SCRIPT_DIR/hooks/post-commit" "$HOOKS_DIR/post-commit"
-    chmod +x "$HOOKS_DIR/post-commit"
-    echo -e "${GREEN}✓${NC} Installed post-commit hook"
-else
-    echo -e "${RED}Error:${NC} $SCRIPT_DIR/hooks/post-commit not found"
-    exit 1
-fi
-
-# Install pre-push hook (for quality checks)
-if [ -f "$HOOKS_DIR/pre-push" ]; then
-    BACKUP_NAME="$HOOKS_DIR/pre-push.backup-$(date +%Y%m%d-%H%M%S)"
-    mv "$HOOKS_DIR/pre-push" "$BACKUP_NAME"
-    echo -e "${YELLOW}Note:${NC} Backed up existing pre-push hook to $(basename $BACKUP_NAME)"
-fi
-
-if [ -f "$SCRIPT_DIR/hooks/pre-push" ]; then
-    cp "$SCRIPT_DIR/hooks/pre-push" "$HOOKS_DIR/pre-push"
-    chmod +x "$HOOKS_DIR/pre-push"
-    echo -e "${GREEN}✓${NC} Installed pre-push hook"
-else
-    echo -e "${YELLOW}Warning:${NC} $SCRIPT_DIR/hooks/pre-push not found, skipping"
-fi
-
-# Note about pre-commit hook
-if [ -f "$HOOKS_DIR/pre-commit" ]; then
-    echo -e "${YELLOW}Note:${NC} Existing pre-commit hook found (likely from RepoKit)"
-    echo "      Keeping existing pre-commit hook for branch protection"
+# Install standard hooks if selected or user changed mind
+if [ "$INSTALL_STANDARD" = true ]; then
+    echo -e "${GREEN}Installing standard hooks with security...${NC}"
+    
+    # Backup existing hooks if they exist
+    for hook in pre-commit post-commit pre-push; do
+        if [ -f "$HOOKS_DIR/$hook" ]; then
+            BACKUP_NAME="$HOOKS_DIR/$hook.backup-$(date +%Y%m%d-%H%M%S)"
+            mv "$HOOKS_DIR/$hook" "$BACKUP_NAME"
+            echo -e "${YELLOW}Note:${NC} Backed up existing $hook hook"
+        fi
+    done
+    
+    # Install pre-commit (with security + version update)
+    if [ -f "$SCRIPT_DIR/hooks/pre-commit" ]; then
+        cp "$SCRIPT_DIR/hooks/pre-commit" "$HOOKS_DIR/pre-commit"
+        chmod +x "$HOOKS_DIR/pre-commit"
+        echo -e "${GREEN}✓${NC} Installed pre-commit hook with security + version update"
+    else
+        echo -e "${RED}Error:${NC} $SCRIPT_DIR/hooks/pre-commit not found"
+        exit 1
+    fi
+    
+    # Install post-commit
+    if [ -f "$SCRIPT_DIR/hooks/post-commit" ]; then
+        cp "$SCRIPT_DIR/hooks/post-commit" "$HOOKS_DIR/post-commit"
+        chmod +x "$HOOKS_DIR/post-commit"
+        echo -e "${GREEN}✓${NC} Installed post-commit hook"
+    else
+        echo -e "${YELLOW}Warning:${NC} $SCRIPT_DIR/hooks/post-commit not found"
+    fi
+    
+    # Install pre-push
+    if [ -f "$SCRIPT_DIR/hooks/pre-push" ]; then
+        cp "$SCRIPT_DIR/hooks/pre-push" "$HOOKS_DIR/pre-push"
+        chmod +x "$HOOKS_DIR/pre-push"
+        echo -e "${GREEN}✓${NC} Installed pre-push hook"
+    else
+        echo -e "${YELLOW}Warning:${NC} $SCRIPT_DIR/hooks/pre-push not found"
+    fi
 fi
 
 # Make update-version.sh executable
@@ -109,11 +181,19 @@ echo "  • Options: --build, --commit, --date YYYYMMDD"
 
 echo ""
 echo -e "${YELLOW}Tips:${NC}"
-echo "  • post-commit hook runs automatically after each commit"
-echo "  • Updates version.py with actual commit hash"
+echo "  • pre-commit hook updates version.py BEFORE each commit"
+echo "  • post-commit hook updates with actual commit hash"
 echo "  • To bypass hooks temporarily: git commit --no-verify"
 echo "  • Version format: VERSION_BRANCH_BUILD-DATE-HASH"
 echo "  • View version: python -c \"from folder_datetime_fix.version import __version__; print(__version__)\""
 
+if [ "$INSTALL_STANDARD" = true ]; then
+    echo ""
+    echo -e "${GREEN}✅ Security Features Enabled:${NC}"
+    echo "  • Branch protection (no private files on public branches)"
+    echo "  • Large file blocking (>10MB)"
+    echo "  • Version tracking"
+fi
+
 echo ""
-echo -e "${GREEN}Ready to track versions!${NC}"
+echo -e "${GREEN}Ready to track versions securely!${NC}"
