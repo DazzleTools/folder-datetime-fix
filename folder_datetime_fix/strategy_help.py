@@ -32,7 +32,7 @@ Example scenario:
     Archive/          (May 1, 2024 - subfolder)
       old-pic.jpg     (Jan 1, 2020 - NOT examined)
 
-Result with --skip-generated:
+Result (default behavior, system files skipped):
   Photos timestamp = July 20, 2024 (latest user file)
 
 2. DEEP
@@ -58,7 +58,7 @@ Example scenario:
     docs/
       manual.pdf      (April 10, 2024)
 
-Result with --skip-generated:
+Result (default behavior, system files skipped):
   Project timestamp = October 15, 2024 (newest file anywhere)
 
 3. SMART
@@ -95,7 +95,7 @@ Strategies work with depth levels to control which folders are processed:
 Each processed folder uses the specified strategy independently.
 
 Example:
-  mod_fldr_dt.py C:\\Projects --depth 1 --strategy deep
+  folder-datetime-fix C:\\Projects --depth 1 --strategy deep
 
 This will:
 1. Find all folders at depth 1 (immediate subfolders of Projects)
@@ -105,18 +105,20 @@ This will:
 SYSTEM FILE HANDLING
 ====================
 
-The --skip-generated flag affects all strategies:
+By default, system-generated files are automatically SKIPPED to show true
+user modification dates. Use --include-generated to change this behavior.
 
-Without --skip-generated:
-- All files considered, including thumbs.db, desktop.ini
-- Folders may show today's date due to system files
+Default behavior (system files skipped):
+- System files like thumbs.db, desktop.ini are ignored
+- Folders show actual last user modification date
+- Empty folders (containing only system files) are skipped
 
-With --skip-generated:
-- System files ignored in timestamp calculation
-- Folders show actual last user modification
-- Empty folders (only system files) are skipped
+With --include-generated flag:
+- All files considered, including system files
+- Folders may show today's date due to recent system file updates
+- Empty folders with only system files will be processed
 
-Common system files skipped:
+Common system files skipped by default:
 - Windows: thumbs.db, desktop.ini, IconCache.db
 - macOS: .DS_Store, .localized
 - IDEs: .vscode/settings.json, .idea/
