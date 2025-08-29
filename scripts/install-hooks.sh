@@ -38,12 +38,13 @@ echo -e "${BLUE}Available hooks:${NC}"
 echo ""
 echo "This will install hooks that:"
 echo "  • post-commit: Updates version.py with actual commit hash"
+echo "  • pre-push: Runs quality checks before pushing (syntax, tests, debug checks)"
 echo "  • Format: VERSION_BRANCH_BUILD-YYYYMMDD-COMMITHASH"
 echo "  • Example: 0.5.1_main_42-20250828-a1b2c3d4"
 echo ""
 
 # Ask for confirmation
-echo -e "${YELLOW}Install the version update hooks?${NC}"
+echo -e "${YELLOW}Install git hooks?${NC}"
 read -p "Install? (y/N): " -n 1 -r
 echo ""
 
@@ -68,6 +69,21 @@ else
     exit 1
 fi
 
+# Install pre-push hook (for quality checks)
+if [ -f "$HOOKS_DIR/pre-push" ]; then
+    BACKUP_NAME="$HOOKS_DIR/pre-push.backup-$(date +%Y%m%d-%H%M%S)"
+    mv "$HOOKS_DIR/pre-push" "$BACKUP_NAME"
+    echo -e "${YELLOW}Note:${NC} Backed up existing pre-push hook to $(basename $BACKUP_NAME)"
+fi
+
+if [ -f "$SCRIPT_DIR/hooks/pre-push" ]; then
+    cp "$SCRIPT_DIR/hooks/pre-push" "$HOOKS_DIR/pre-push"
+    chmod +x "$HOOKS_DIR/pre-push"
+    echo -e "${GREEN}✓${NC} Installed pre-push hook"
+else
+    echo -e "${YELLOW}Warning:${NC} $SCRIPT_DIR/hooks/pre-push not found, skipping"
+fi
+
 # Note about pre-commit hook
 if [ -f "$HOOKS_DIR/pre-commit" ]; then
     echo -e "${YELLOW}Note:${NC} Existing pre-commit hook found (likely from RepoKit)"
@@ -84,7 +100,7 @@ echo ""
 echo -e "${GREEN}Hook installation complete!${NC}"
 echo ""
 echo -e "${BLUE}Installed hooks:${NC}"
-ls -la "$HOOKS_DIR" | grep -E "(pre-commit|post-commit)" | grep -v backup || true
+ls -la "$HOOKS_DIR" | grep -E "(pre-commit|post-commit|pre-push)" | grep -v backup || true
 
 echo ""
 echo -e "${BLUE}Manual version update:${NC}"
