@@ -36,14 +36,14 @@ echo ""
 # Check available hooks
 echo -e "${BLUE}Available hooks:${NC}"
 echo ""
-echo "This will install a pre-commit hook that:"
-echo "  • Automatically updates version.py with build information"
+echo "This will install hooks that:"
+echo "  • post-commit: Updates version.py with actual commit hash"
 echo "  • Format: VERSION_BRANCH_BUILD-YYYYMMDD-COMMITHASH"
 echo "  • Example: 0.5.1_main_42-20250828-a1b2c3d4"
 echo ""
 
 # Ask for confirmation
-echo -e "${YELLOW}Install the version update hook?${NC}"
+echo -e "${YELLOW}Install the version update hooks?${NC}"
 read -p "Install? (y/N): " -n 1 -r
 echo ""
 
@@ -52,21 +52,26 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     exit 0
 fi
 
-# Backup existing hook if it exists
-if [ -f "$HOOKS_DIR/pre-commit" ]; then
-    BACKUP_NAME="$HOOKS_DIR/pre-commit.backup-$(date +%Y%m%d-%H%M%S)"
-    mv "$HOOKS_DIR/pre-commit" "$BACKUP_NAME"
-    echo -e "${YELLOW}Note:${NC} Backed up existing pre-commit hook to $(basename $BACKUP_NAME)"
+# Install post-commit hook (for version updates)
+if [ -f "$HOOKS_DIR/post-commit" ]; then
+    BACKUP_NAME="$HOOKS_DIR/post-commit.backup-$(date +%Y%m%d-%H%M%S)"
+    mv "$HOOKS_DIR/post-commit" "$BACKUP_NAME"
+    echo -e "${YELLOW}Note:${NC} Backed up existing post-commit hook to $(basename $BACKUP_NAME)"
 fi
 
-# Install pre-commit hook
-if [ -f "$SCRIPT_DIR/hooks/pre-commit-basic" ]; then
-    cp "$SCRIPT_DIR/hooks/pre-commit-basic" "$HOOKS_DIR/pre-commit"
-    chmod +x "$HOOKS_DIR/pre-commit"
-    echo -e "${GREEN}✓${NC} Installed pre-commit hook"
+if [ -f "$SCRIPT_DIR/hooks/post-commit" ]; then
+    cp "$SCRIPT_DIR/hooks/post-commit" "$HOOKS_DIR/post-commit"
+    chmod +x "$HOOKS_DIR/post-commit"
+    echo -e "${GREEN}✓${NC} Installed post-commit hook"
 else
-    echo -e "${RED}Error:${NC} $SCRIPT_DIR/hooks/pre-commit-basic not found"
+    echo -e "${RED}Error:${NC} $SCRIPT_DIR/hooks/post-commit not found"
     exit 1
+fi
+
+# Note about pre-commit hook
+if [ -f "$HOOKS_DIR/pre-commit" ]; then
+    echo -e "${YELLOW}Note:${NC} Existing pre-commit hook found (likely from RepoKit)"
+    echo "      Keeping existing pre-commit hook for branch protection"
 fi
 
 # Make update-version.sh executable
@@ -79,7 +84,7 @@ echo ""
 echo -e "${GREEN}Hook installation complete!${NC}"
 echo ""
 echo -e "${BLUE}Installed hooks:${NC}"
-ls -la "$HOOKS_DIR" | grep -E "pre-commit" | grep -v backup || true
+ls -la "$HOOKS_DIR" | grep -E "(pre-commit|post-commit)" | grep -v backup || true
 
 echo ""
 echo -e "${BLUE}Manual version update:${NC}"
@@ -88,10 +93,11 @@ echo "  • Options: --build, --commit, --date YYYYMMDD"
 
 echo ""
 echo -e "${YELLOW}Tips:${NC}"
-echo "  • Hook runs automatically on git commit"
-echo "  • To bypass hook temporarily: git commit --no-verify"
+echo "  • post-commit hook runs automatically after each commit"
+echo "  • Updates version.py with actual commit hash"
+echo "  • To bypass hooks temporarily: git commit --no-verify"
 echo "  • Version format: VERSION_BRANCH_BUILD-DATE-HASH"
-echo "  • View version: python -c \"from version import __version__; print(__version__)\""
+echo "  • View version: python -c \"from folder_datetime_fix.version import __version__; print(__version__)\""
 
 echo ""
 echo -e "${GREEN}Ready to track versions!${NC}"
