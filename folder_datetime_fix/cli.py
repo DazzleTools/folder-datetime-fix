@@ -18,6 +18,7 @@ from .unc_handler import get_unc_handler
 from .strategy_help import print_strategy_help
 from .version import __version__, get_base_version
 from .trace_utils import trace, set_verbosity
+from .analysis_strategies import StrategyFactory
 
 MAX_DEPTH_INFINITE = 100  # Reasonable maximum for "infinite" depth
 
@@ -300,15 +301,17 @@ def main():
     scanner = FolderScanner(skip_generated=skip_system_files, verbose=verbosity)
     fixer = TimestampFixer(dry_run=args.dry_run, verbose=verbosity)
     
+    # Create analysis strategy based on --analyze parameter
+    strategy = StrategyFactory.create_strategy(args.analyze, scanner, args.strategy)
+    
+    if not args.quiet and verbosity >= 1:
+        print(f"Analysis:      {strategy.get_name()}")
+    
     # Perform scanning
     if not args.quiet:
         print("Scanning folders...")
     
-    scan_results = scanner.scan_and_collect(
-        target_path,
-        args.depths,
-        args.strategy
-    )
+    scan_results = strategy.analyze(target_path, args.depths)
     
     if not args.quiet:
         print(f"Found {len(scan_results)} folders to process\n")

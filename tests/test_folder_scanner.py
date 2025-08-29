@@ -262,6 +262,25 @@ class TestSystemFileDetection(unittest.TestCase):
         self.assertFalse(is_system_generated('README.md'))
         self.assertFalse(is_system_generated('main.py'))
         self.assertFalse(is_system_generated('index.html'))
+    
+    def test_system_folders_detected(self):
+        """Test detection of system-generated folders."""
+        self.assertTrue(is_system_generated('__pycache__'))
+        self.assertTrue(is_system_generated('.git'))
+        self.assertTrue(is_system_generated('.vscode'))
+        self.assertTrue(is_system_generated('node_modules'))
+        self.assertTrue(is_system_generated('.pytest_cache'))
+        self.assertTrue(is_system_generated('venv'))
+        self.assertTrue(is_system_generated('build'))
+        self.assertTrue(is_system_generated('dist'))
+    
+    def test_user_folders_not_detected(self):
+        """Test that normal user folders are not detected as system folders."""
+        self.assertFalse(is_system_generated('src'))
+        self.assertFalse(is_system_generated('documents'))
+        self.assertFalse(is_system_generated('projects'))
+        self.assertFalse(is_system_generated('my_folder'))
+        self.assertFalse(is_system_generated('data'))
 
 
 if __name__ == '__main__':

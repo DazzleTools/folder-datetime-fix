@@ -28,6 +28,72 @@ class FolderScanner:
         self.use_cache = use_cache
         self.cache = SmartStreamingCache(memory_limit_mb=100) if use_cache else None
     
+    def detect_max_depth(self, base_path: Path, limit: int = 100) -> int:
+        """
+        Quickly detect the actual maximum depth of a directory tree.
+        
+        Args:
+            base_path: Starting directory
+            limit: Safety limit to prevent infinite recursion (default 100)
+        
+        Returns:
+            Maximum depth found in the tree
+        """
+        base_path = Path(base_path).resolve()
+        max_depth = 0
+        
+        if self.verbose >= 2:
+            print(f"Detecting maximum depth of tree at {base_path}...")
+        
+        try:
+            for root, dirs, _ in os.walk(base_path):
+                # Filter out system-generated directories from further traversal FIRST
+                # This must happen before we process the current directory
+                if self.skip_generated and dirs:
+                    # This modifies dirs in-place to control os.walk traversal
+                    dirs[:] = [d for d in dirs if not is_system_generated(d)]
+                
+                # Skip system-generated directories if needed
+                if self.skip_generated and root != str(base_path):
+                    # Check if current directory name is system-generated
+                    dir_name = Path(root).name
+                    if is_system_generated(dir_name):
+                        # This directory shouldn't have been visited if parent filtered correctly
+                        # but handle it anyway for robustness
+                        continue
+                
+                # Calculate depth relative to base
+                try:
+                    rel_path = Path(root).relative_to(base_path)
+                    if rel_path == Path('.'):
+                        current_depth = 0
+                    else:
+                        current_depth = len(rel_path.parts)
+                except ValueError:
+                    # Should not happen, but handle gracefully
+                    continue
+                
+                # Update max depth
+                if current_depth > max_depth:
+                    max_depth = current_depth
+                    if self.verbose >= 3:
+                        print(f"  New max depth: {max_depth} at {rel_path}")
+                
+                # Safety limit
+                if max_depth >= limit:
+                    if self.verbose >= 1:
+                        print(f"  Reached depth limit of {limit}, stopping detection")
+                    break
+                    
+        except PermissionError as e:
+            if self.verbose >= 2:
+                print(f"  Permission denied during depth detection: {e}")
+        
+        if self.verbose >= 1:
+            print(f"Maximum tree depth detected: {max_depth}")
+            
+        return max_depth
+    
     @trace
     def get_folders_at_depth(self, base_path: Path, depth: int) -> List[Path]:
         """
@@ -222,7 +288,7 @@ class FolderScanner:
     
     @trace
     def scan_and_collect(self, base_path: Path, depths: List[int], 
-                        strategy: str = 'shallow') -> List[Tuple[Path, Optional[datetime]]]:
+                        strategy: str = 'shallow', use_max_depth_detection: bool = True) -> List[Tuple[Path, Optional[datetime]]]:
         """
         Scan folders at specified depths and collect their timestamps.
         
@@ -230,12 +296,23 @@ class FolderScanner:
             base_path: Starting directory
             depths: List of depths to process
             strategy: 'shallow', 'deep', or 'smart'
+            use_max_depth_detection: If True, detect actual max depth first
         
         Returns:
             List of (folder_path, timestamp) tuples
         """
         results = []
         processed = set()  # Avoid processing same folder twice
+        
+        # For infinite depth operations, detect actual max depth first
+        if use_max_depth_detection and depths and max(depths) > 20:
+            actual_max = self.detect_max_depth(base_path, limit=max(depths))
+            if actual_max < max(depths):
+                # Filter depths to only those that exist
+                original_count = len(depths)
+                depths = [d for d in depths if d <= actual_max]
+                if self.verbose >= 1 and len(depths) < original_count:
+                    print(f"Optimized: Reduced depths from {original_count} to {len(depths)} based on actual tree depth of {actual_max}")
         
         if self.verbose >= 3:
             print(f"Scanning with strategy: {strategy}")

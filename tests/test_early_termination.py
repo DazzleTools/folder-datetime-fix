@@ -62,7 +62,8 @@ class TestEarlyTermination(unittest.TestCase):
             results = scanner.scan_and_collect(
                 self.base_path, 
                 depths, 
-                strategy='shallow'
+                strategy='shallow',
+                use_max_depth_detection=False  # Test early termination, not max depth detection
             )
         
         # Check that early termination message was printed

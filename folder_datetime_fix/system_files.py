@@ -1,5 +1,5 @@
 """
-System-generated files that should be excluded with --skip-generated flag.
+System-generated files and folders that should be excluded with --skip-generated flag.
 """
 
 # System-generated files that are typically not user-created
@@ -25,10 +25,6 @@ SYSTEM_GENERATED_FILES = {
     # macOS system files
     '.DS_Store',
     '.localized',
-    '.Spotlight-V100',
-    '.fseventsd',
-    '.TemporaryItems',
-    '.Trashes',
     '.VolumeIcon.icns',
     '.com.apple.timemachine.donotpresent',
     
@@ -43,27 +39,19 @@ SYSTEM_GENERATED_FILES = {
     '.dropbox',
     '.dropbox.cache',
     '.dropbox.attr',
-    'desktop.ini',  # OneDrive uses this too
     '.sync',
     '.owncloudsync.log',
     
-    # Version control indexes (debatable - might want separate flag)
+    # Version control index files
     '.git/index',
     '.git/index.lock',
     '.svn/entries',
     '.hg/dirstate',
     
-    # IDE/Editor files (debatable - might want separate flag)
+    # IDE/Editor specific files
     '.vscode/settings.json',
-    '.idea/',
-    '.vs/',
     '*.swp',  # Vim swap files
     '*~',     # Emacs/general backup files
-    
-    # Package manager caches
-    'node_modules/.cache/',
-    '__pycache__/',
-    '.pytest_cache/',
     
     # Temporary files
     '~$*',  # MS Office temp files
@@ -71,19 +59,67 @@ SYSTEM_GENERATED_FILES = {
     '*.tmp',
 }
 
+# System-generated folders that should be excluded
+SYSTEM_GENERATED_FOLDERS = {
+    # Python
+    '__pycache__',
+    '.pytest_cache',
+    
+    # Version control
+    '.git',
+    '.svn',
+    '.hg',
+    '.bzr',
+    
+    # IDEs and editors
+    '.idea',
+    '.vscode',
+    '.vs',
+    '.venv',
+    'venv',
+    '.virtualenv',
+    
+    # Node.js
+    'node_modules',
+    '.npm',
+    '.yarn',
+    
+    # macOS
+    '.Spotlight-V100',
+    '.fseventsd',
+    '.TemporaryItems',
+    '.Trashes',
+    
+    # Build outputs
+    'build',
+    'dist',
+    'target',
+    '.gradle',
+    '.maven',
+    
+    # Cache directories
+    '.cache',
+    '.sass-cache',
+    '.parcel-cache',
+}
+
 def is_system_generated(filename):
     """
-    Check if a filename matches system-generated patterns.
+    Check if a filename or folder name matches system-generated patterns.
     
     Args:
-        filename: Name of the file (not full path)
+        filename: Name of the file or directory (not full path)
     
     Returns:
-        bool: True if file appears to be system-generated
+        bool: True if file/folder appears to be system-generated
     """
     filename_lower = filename.lower()
     
-    # Check exact matches
+    # Check if it's a system-generated folder
+    if filename_lower in {f.lower() for f in SYSTEM_GENERATED_FOLDERS}:
+        return True
+    
+    # Check exact file matches
     if filename_lower in {f.lower() for f in SYSTEM_GENERATED_FILES if not f.startswith('*') and not f.endswith('*')}:
         return True
     
