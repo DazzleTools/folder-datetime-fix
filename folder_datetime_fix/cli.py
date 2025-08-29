@@ -25,14 +25,9 @@ from .tree_visualizer import TreeVisualizer
 MAX_DEPTH_INFINITE = 100  # Reasonable maximum for "infinite" depth
 
 
-@trace
-def parse_arguments(argv=None):
-    """Parse command-line arguments."""
-    parser = argparse.ArgumentParser(
-        description='Fix folder modified timestamps to match their content (system files skipped by default)',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Quick Start for Network Shares:
+def get_howto_examples(prog='fdtfix.py'):
+    """Get the howto examples text for help messages."""
+    return """Quick Start for Network Shares:
   {prog1:<55} # Preview all fixes (system files auto-skipped)
   
 Basic Examples:
@@ -61,27 +56,50 @@ Network Share Examples:
 For detailed strategy explanations and performance tips:
   {prog17:<55} # How scan strategies work
   {prog18:<55} # How analysis strategies work
-  See also: docs/Recipes-and-Examples.md and docs/Performance-Optimization.md
-        """.format(
-            prog1='%(prog)s --unc-path "\\\\server\\folder" -fa --dry-run -vv',
-            prog2="%(prog)s C:\\Projects --depth 0",
-            prog3="%(prog)s C:\\Projects --depth 1",
-            prog4="%(prog)s C:\\Projects --depth 0 --depth 1",
-            prog5="%(prog)s C:\\Projects -f2",
-            prog6="%(prog)s C:\\Projects -fa",
-            prog7="%(prog)s C:\\Photos --strategy shallow",
-            prog8="%(prog)s C:\\Projects --strategy deep",
-            prog9="%(prog)s C:\\Work --strategy smart",
-            prog10="%(prog)s . -fa --include-generated",
-            prog11="%(prog)s C:\\Work --depth 2 --dry-run -vvv",
-            prog12="%(prog)s C:\\Big -fa --max-depth 3",
-            prog13="%(prog)s //server/share -f2 --dry-run",
-            prog14='%(prog)s --unc-path "\\\\server\\folder" -fa -vv',
-            prog15="%(prog)s C:\\Code --depth-to 3",
-            prog16="%(prog)s C:\\Projects --depth-from 1 --depth-to 4",
-            prog17="%(prog)s --help strategy",
-            prog18="%(prog)s --help analyze"
-        )
+  See also: docs/Recipes-and-Examples.md and docs/Performance-Optimization.md""".format(
+        prog1=f'{prog} --unc-path "\\\\server\\folder" -fa --dry-run -vv',
+        prog2=f"{prog} C:\\Projects --depth 0",
+        prog3=f"{prog} C:\\Projects --depth 1",
+        prog4=f"{prog} C:\\Projects --depth 0 --depth 1",
+        prog5=f"{prog} C:\\Projects -f2",
+        prog6=f"{prog} C:\\Projects -fa",
+        prog7=f"{prog} C:\\Photos --strategy shallow",
+        prog8=f"{prog} C:\\Projects --strategy deep",
+        prog9=f"{prog} C:\\Work --strategy smart",
+        prog10=f"{prog} . -fa --include-generated",
+        prog11=f"{prog} C:\\Work --depth 2 --dry-run -vvv",
+        prog12=f"{prog} C:\\Big -fa --max-depth 3",
+        prog13=f"{prog} //server/share -f2 --dry-run",
+        prog14=f'{prog} --unc-path "\\\\server\\folder" -fa -vv',
+        prog15=f"{prog} C:\\Code --depth-to 3",
+        prog16=f"{prog} C:\\Projects --depth-from 1 --depth-to 4",
+        prog17=f"{prog} --help strategy",
+        prog18=f"{prog} --help analyze"
+    )
+
+
+def print_simple_help():
+    """Print simplified help when no arguments provided."""
+    prog = 'fdtfix.py'
+    print(f"""usage: {prog} [-h] [--version] [--unc-path UNC_PATH] [--depth DEPTHS] [--depth-to N] [--depth-from N] [--strategy {{shallow,deep,smart}}]
+                 [--fix-2] [--fix-all] [--fix-immediate] [--exclude-mode {{default,none,files,folders}}] [--exclude PATTERNS]
+                 [--include PATTERNS] [--include-generated] [--analyze ANALYZE] [--visualize] [--dry-run] [--verbose] [--quiet]
+                 [--report FILE] [--max-depth N]
+                 [path]
+
+Fix folder modified timestamps to match their content (system files skipped by default)
+
+{get_howto_examples(prog)}
+""")
+
+
+@trace
+def parse_arguments(argv=None):
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description='Fix folder modified timestamps to match their content (system files skipped by default)',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=get_howto_examples('%(prog)s')
     )
     
     # Version information
@@ -324,8 +342,8 @@ def main():
     elif args.path:
         path_to_use = args.path
     else:
-        # No path provided - show help
-        parse_arguments(['--help'])
+        # No path provided - show simplified help
+        print_simple_help()
         return 1
     
     # Initialize UNC handler for network path support
