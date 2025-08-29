@@ -119,6 +119,11 @@ For detailed strategy explanations and performance tips:
                        action='store_true',
                        help='Include system-generated files like thumbs.db, desktop.ini (normally skipped)')
     
+    # Analysis mode
+    parser.add_argument('--analyze',
+                       default='auto',
+                       help='Analysis strategy: tree (full memory), low-memory (streaming), auto (adaptive), or comma-separated options like tree,ctime (default: auto)')
+    
     # Execution modes
     parser.add_argument('--dry-run', '-n',
                        action='store_true',
@@ -140,7 +145,7 @@ For detailed strategy explanations and performance tips:
                        help='Save detailed report to file')
     
     # Advanced options
-    parser.add_argument('--max-depth',
+    parser.add_argument('--max-depth', '-m',
                        type=int,
                        metavar='N',
                        help='Maximum depth for --fix-all or --depth infinite (default: 100)')

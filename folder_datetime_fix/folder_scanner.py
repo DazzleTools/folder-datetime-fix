@@ -8,21 +8,25 @@ from pathlib import Path
 from typing import List, Optional, Set, Tuple
 from .system_files import is_system_generated
 from .trace_utils import trace
+from .cache import SmartStreamingCache, CacheCompleteness
 
 
 class FolderScanner:
     """Scans folders and collects timestamp information based on depth and strategy."""
     
-    def __init__(self, skip_generated: bool = False, verbose: int = 0):
+    def __init__(self, skip_generated: bool = False, verbose: int = 0, use_cache: bool = True):
         """
         Initialize the scanner.
         
         Args:
             skip_generated: If True, exclude system-generated files from timestamp calculation
             verbose: Verbosity level (0=quiet, 1=basic, 2=detailed, 3=debug, 4=trace)
+            use_cache: If True, enable smart caching for performance
         """
         self.skip_generated = skip_generated
         self.verbose = verbose
+        self.use_cache = use_cache
+        self.cache = SmartStreamingCache(memory_limit_mb=100) if use_cache else None
     
     @trace
     def get_folders_at_depth(self, base_path: Path, depth: int) -> List[Path]:
@@ -76,6 +80,15 @@ class FolderScanner:
         if not folder_path.is_dir():
             return None
         
+        # Use cache if available
+        if self.use_cache and self.cache:
+            mtime, completeness = self.cache.get_or_compute(
+                folder_path, "shallow", verbose=self.verbose
+            )
+            if mtime > 0:
+                return datetime.fromtimestamp(mtime)
+            return None
+        
         latest_time = None
         
         try:
@@ -117,6 +130,15 @@ class FolderScanner:
         folder_path = Path(folder_path).resolve()
         
         if not folder_path.is_dir():
+            return None
+        
+        # Use cache if available
+        if self.use_cache and self.cache:
+            mtime, completeness = self.cache.get_or_compute(
+                folder_path, "deep", verbose=self.verbose
+            )
+            if mtime > 0:
+                return datetime.fromtimestamp(mtime)
             return None
         
         latest_time = None
@@ -171,6 +193,15 @@ class FolderScanner:
         folder_path = Path(folder_path).resolve()
         
         if not folder_path.is_dir():
+            return None
+        
+        # Use cache if available
+        if self.use_cache and self.cache:
+            mtime, completeness = self.cache.get_or_compute(
+                folder_path, "smart", verbose=self.verbose
+            )
+            if mtime > 0:
+                return datetime.fromtimestamp(mtime)
             return None
         
         # Check if folder has subdirectories
@@ -280,5 +311,15 @@ class FolderScanner:
                                 processed.add(root_path)
                 else:
                     raise ValueError(f"Unknown strategy: {strategy}")
+        
+        # Report cache statistics if verbose
+        if self.use_cache and self.cache and self.verbose >= 2:
+            stats = self.cache.get_statistics()
+            print(f"\nCache Statistics:")
+            print(f"  Hits: {stats['hits']}")
+            print(f"  Misses: {stats['misses']}")
+            print(f"  Hit Rate: {stats['hit_rate']:.1%}")
+            print(f"  Entries: {stats['entries']}")
+            print(f"  Memory: {stats['memory_bytes']:,} bytes")
         
         return results

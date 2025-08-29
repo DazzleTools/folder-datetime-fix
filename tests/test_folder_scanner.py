@@ -27,8 +27,9 @@ class TestFolderScanner(unittest.TestCase):
     def setUp(self):
         """Create a temporary test directory structure."""
         self.test_dir = tempfile.mkdtemp(prefix='test_folder_scanner_')
-        self.scanner = FolderScanner(skip_generated=False)
-        self.scanner_skip = FolderScanner(skip_generated=True)
+        # Disable cache for tests to ensure consistent behavior
+        self.scanner = FolderScanner(skip_generated=False, use_cache=False)
+        self.scanner_skip = FolderScanner(skip_generated=True, use_cache=False)
         
     def tearDown(self):
         """Clean up test directory."""
