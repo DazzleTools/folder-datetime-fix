@@ -17,8 +17,8 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from folder_scanner import FolderScanner
-from system_files import is_system_generated
+from folder_datetime_fix.folder_scanner import FolderScanner
+from folder_datetime_fix.system_files import is_system_generated
 
 
 class TestFolderScanner(unittest.TestCase):

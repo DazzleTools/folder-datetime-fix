@@ -1,8 +1,10 @@
 from setuptools import setup, find_packages
 import os
+import sys
 
-# Import version from version.py
-from version import get_base_version
+# Add the package directory to path to import version
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'folder_datetime_fix'))
+from version import get_pip_version
 
 # Read the README for long description
 with open("README.md", "r", encoding="utf-8") as fh:
@@ -10,18 +12,18 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="folder-datetime-fix",
-    version=get_base_version(),
+    version=get_pip_version(),  # Use PEP 440 compliant version for pip
     description="Fix folder timestamps corrupted by system files like thumbs.db on Windows",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Dustin",
     author_email="6962246+djdarcy@users.noreply.github.com",
     url="https://github.com/djdarcy/modified_datetime_fix",
-    py_modules=["mod_fldr_dt", "folder_scanner", "timestamp_fixer", "system_files", "unc_handler", "strategy_help", "version"],
+    packages=find_packages(),
     entry_points={
         "console_scripts": [
-            "folder-datetime-fix=mod_fldr_dt:main",
-            "mod_fldr_dt=mod_fldr_dt:main",
+            "folder-datetime-fix=folder_datetime_fix.cli:main",
+            "mod_fldr_dt=folder_datetime_fix.cli:main",  # Keep for backward compatibility
         ],
     },
     install_requires=[
@@ -45,7 +47,7 @@ setup(
         "Intended Audience :: Developers",
         "Topic :: System :: Filesystems",
         "Topic :: Utilities",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",

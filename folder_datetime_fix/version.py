@@ -17,13 +17,13 @@ Components:
 # Semantic version components
 MAJOR = 0
 MINOR = 5
-PATCH = 1
+PATCH = 2
 
 # Full version string - updated by git pre-commit hook
 # DO NOT EDIT THIS LINE MANUALLY
 # Note: Hash reflects the commit this version builds upon (HEAD at commit time)
 # The hash will be one commit behind after the commit is created (git limitation)
-__version__ = "0.5.1_private_11-20250828-960c411d"
+__version__ = "0.5.2_private_13-20250828-ad442287"
 
 
 def get_version():
@@ -33,6 +33,12 @@ def get_version():
 
 def get_base_version():
     """Return the semantic version string (MAJOR.MINOR.PATCH)."""
+    # Extract base version from __version__ string to maintain single source of truth
+    # Format: VERSION_BRANCH_BUILD-DATE-HASH
+    # Example: 0.5.1_private_13-20250828-ad442287 -> 0.5.1
+    if '_' in __version__:
+        return __version__.split('_')[0]
+    # Fallback if __version__ doesn't have expected format
     return f"{MAJOR}.{MINOR}.{PATCH}"
 
 
@@ -66,6 +72,32 @@ def get_version_dict():
     }
 
 
+def get_pip_version():
+    """
+    Return PEP 440 compliant version for pip/setuptools.
+    
+    Converts our version format to PEP 440:
+    - Main branch: 0.5.1_main_13-20250828-hash → 0.5.1
+    - Dev branch: 0.5.1_private_13-20250828-hash → 0.5.1.dev13
+    - Feature branch: 0.5.1_feature_13-20250828-hash → 0.5.1.dev13+feature
+    """
+    if '_' not in __version__:
+        return get_base_version()
+    
+    parts = __version__.split('_')
+    base = parts[0]
+    branch = parts[1] if len(parts) > 1 else 'unknown'
+    
+    if branch == 'main':
+        # Release version
+        return base
+    else:
+        # Development version
+        build_info = '_'.join(parts[2:]) if len(parts) > 2 else ''
+        build_num = build_info.split('-')[0] if '-' in build_info else '0'
+        return f"{base}.dev{build_num}"
+
 # For convenience in imports
 VERSION = get_version()
 BASE_VERSION = get_base_version()
+PIP_VERSION = get_pip_version()

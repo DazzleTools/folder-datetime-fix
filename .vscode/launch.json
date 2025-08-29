@@ -1,45 +1,116 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+        {
+            "name": "Test: Dry Run on Current Directory",
+            "type": "python",
+            "request": "launch",
+            "module": "folder_datetime_fix",
+            "args": [".", "--depth", "0", "--dry-run", "-vv"],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Test: Fix Single Folder (Dry Run)",
+            "type": "python",
+            "request": "launch",
+            "module": "folder_datetime_fix",
+            "args": ["${input:targetPath}", "--depth", "0", "--dry-run", "-v"],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Test: Fix Immediate Subfolders",
+            "type": "python",
+            "request": "launch",
+            "module": "folder_datetime_fix",
+            "args": ["${input:targetPath}", "--fix-immediate", "--dry-run", "-vv"],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Test: Fix All Recursive",
+            "type": "python",
+            "request": "launch",
+            "module": "folder_datetime_fix",
+            "args": ["${input:targetPath}", "--fix-all", "--max-depth", "3", "--dry-run", "-vv"],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Test: UNC Path",
+            "type": "python",
+            "request": "launch",
+            "module": "folder_datetime_fix",
+            "args": ["--unc-path", "${input:uncPath}", "--fix-immediate", "--dry-run", "-v"],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Test: Trace Debug Mode",
+            "type": "python",
+            "request": "launch",
+            "module": "folder_datetime_fix",
+            "args": [".", "--depth", "0", "--dry-run", "-vvvv"],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Test: Test Structure",
+            "type": "python",
+            "request": "launch",
+            "module": "folder_datetime_fix",
+            "args": ["tests/test_structure", "--fix-all", "--max-depth", "3", "--dry-run", "-vv"],
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "name": "Run Unit Tests",
+            "type": "python",
+            "request": "launch",
+            "module": "pytest",
+            "args": ["tests/", "-v"],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Run Integration Test",
+            "type": "python",
+            "request": "launch",
+            "program": "tests/test_mod_fldr_dt.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Create Test Structure",
+            "type": "python",
+            "request": "launch",
+            "program": "tests/create_test_structure.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
         {
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "Python: Module",
-            "type": "python",
-            "request": "launch",
-            "module": "modified_datetime_fix",
-            "console": "integratedTerminal",
-            "justMyCode": true
-        },
-        {
-            "name": "Python: Current File with Arguments",
-            "type": "python",
-            "request": "launch",
-            "program": "${file}",
-            "console": "integratedTerminal",
-            "args": [
-                // Add your arguments here
-                // Examples:
-                // "--input", "${workspaceFolder}/data/input.txt",
-                // "--output", "${workspaceFolder}/data/output.txt",
-                // Use VS Code's input picker to add arguments at runtime
-                "${command:pickArgs}"
-            ]
+            "justMyCode": false
         }
     ],
-    "compounds": [
+    "inputs": [
         {
-            "name": "Server/Client",
-            "configurations": ["Python: Module", "Python: Current File"]
+            "id": "targetPath",
+            "type": "promptString",
+            "description": "Enter the target folder path",
+            "default": "."
+        },
+        {
+            "id": "uncPath",
+            "type": "promptString",
+            "description": "Enter the UNC path (e.g., \\\\server\\share)",
+            "default": "\\\\server\\share"
         }
     ]
 }

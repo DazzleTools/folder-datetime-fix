@@ -6,8 +6,8 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Set, Tuple
-from system_files import is_system_generated
-from trace_utils import trace
+from .system_files import is_system_generated
+from .trace_utils import trace
 
 
 class FolderScanner:

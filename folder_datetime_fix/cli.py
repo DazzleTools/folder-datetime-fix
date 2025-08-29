@@ -12,12 +12,12 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-from folder_scanner import FolderScanner
-from timestamp_fixer import TimestampFixer
-from unc_handler import get_unc_handler
-from strategy_help import print_strategy_help
-from version import __version__, get_base_version
-from trace_utils import trace, set_verbosity
+from .folder_scanner import FolderScanner
+from .timestamp_fixer import TimestampFixer
+from .unc_handler import get_unc_handler
+from .strategy_help import print_strategy_help
+from .version import __version__, get_base_version
+from .trace_utils import trace, set_verbosity
 
 MAX_DEPTH_INFINITE = 100  # Reasonable maximum for "infinite" depth
 
@@ -30,14 +30,14 @@ def parse_arguments(argv=None):
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s C:\\Projects --depth 0                    # Fix only Projects folder
-  %(prog)s C:\\Projects --depth 1                    # Fix only immediate subfolders
-  %(prog)s C:\\Projects --depth 0 --depth 1         # Fix Projects AND immediate subfolders
-  %(prog)s C:\\Projects --depth infinite             # Fix entire tree (all depths)
-  %(prog)s C:\\Projects --fix-2                      # Fix folder + immediate children
-  %(prog)s \\\\server\\share --fix-all                # Fix entire tree recursively
-  %(prog)s . --fix-all --include-generated         # Fix all INCLUDING system files
-  %(prog)s C:\\Work --depth 2 --dry-run -v          # Preview changes at depth 2
+  %(prog)s C:\\Projects --depth 0               # Fix only Projects folder
+  %(prog)s C:\\Projects --depth 1               # Fix only immediate subfolders
+  %(prog)s C:\\Projects --depth 0 --depth 1     # Fix Projects AND immediate subfolders
+  %(prog)s C:\\Projects --depth infinite        # Fix entire tree (all depths)
+  %(prog)s C:\\Projects --fix-2                 # Fix folder + immediate children
+  %(prog)s \\\\server\\share --fix-all          # Fix entire tree recursively
+  %(prog)s . --fix-all --include-generated      # Fix all INCLUDING system files
+  %(prog)s C:\\Work --depth 2 --dry-run -v      # Preview changes at depth 2
 
 Quick Start for Network Shares:
   %(prog)s --unc-path "\\\\server\\folder" --fix-2 --dry-run

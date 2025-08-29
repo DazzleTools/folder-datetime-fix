@@ -140,3 +140,8 @@ credentials.json
 
 # Add custom patterns below
 tests/test_structure/
+test_runs/
+test-runs/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/

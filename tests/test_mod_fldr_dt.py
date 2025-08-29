@@ -24,7 +24,7 @@ def run_tool(test_path: Path, args: list) -> dict:
     Returns:
         dict with 'success', 'output', and 'error' keys
     """
-    cmd = [sys.executable, str(Path(__file__).parent.parent / 'mod_fldr_dt.py')]
+    cmd = [sys.executable, '-m', 'folder_datetime_fix']
     cmd.append(str(test_path))
     cmd.extend(args)
     
@@ -194,7 +194,7 @@ def main():
         subprocess.run([sys.executable, str(Path(__file__).parent / 'create_test_structure.py')], 
                       capture_output=True)
         
-        passed = test_strategy(
+        passed = run_strategy_test(
             test_base,
             config['name'],
             config['args'],

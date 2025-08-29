@@ -17,7 +17,7 @@ import sys
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from timestamp_fixer import TimestampFixer
+from folder_datetime_fix.timestamp_fixer import TimestampFixer
 
 
 class TestTimestampFixer(unittest.TestCase):
@@ -221,7 +221,7 @@ class TestTimestampFixerIntegration(unittest.TestCase):
     
     def test_full_workflow(self):
         """Test complete scan and fix workflow."""
-        from folder_scanner import FolderScanner
+        from folder_datetime_fix.folder_scanner import FolderScanner
         
         # Create test structure
         base = Path(self.test_dir)

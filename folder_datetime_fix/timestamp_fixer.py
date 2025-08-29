@@ -6,7 +6,7 @@ import os
 from datetime import datetime
 from pathlib import Path
 from typing import List, Tuple, Optional
-from trace_utils import trace
+from .trace_utils import trace
 
 
 class TimestampFixer:

@@ -12,7 +12,7 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from unc_handler import UNCHandler, get_unc_handler
+from folder_datetime_fix.unc_handler import UNCHandler, get_unc_handler
 
 
 class TestUNCHandler(unittest.TestCase):
@@ -34,7 +34,7 @@ class TestUNCHandler(unittest.TestCase):
     def test_unc_path_detection(self):
         """Test detection of UNC paths."""
         # Test with unctools not available
-        with patch('unc_handler.UNCTOOLS_AVAILABLE', False):
+        with patch('folder_datetime_fix.unc_handler.UNCTOOLS_AVAILABLE', False):
             handler = UNCHandler()
             
             # UNC paths
@@ -48,7 +48,7 @@ class TestUNCHandler(unittest.TestCase):
     
     def test_path_normalization(self):
         """Test path normalization."""
-        with patch('unc_handler.UNCTOOLS_AVAILABLE', False):
+        with patch('folder_datetime_fix.unc_handler.UNCTOOLS_AVAILABLE', False):
             handler = UNCHandler()
             
             # UNC paths should be preserved (Windows may add trailing slash)
@@ -65,7 +65,7 @@ class TestUNCHandler(unittest.TestCase):
     
     def test_convert_for_processing(self):
         """Test path conversion for processing."""
-        with patch('unc_handler.UNCTOOLS_AVAILABLE', False):
+        with patch('folder_datetime_fix.unc_handler.UNCTOOLS_AVAILABLE', False):
             handler = UNCHandler(verbose=False)
             
             # UNC path
@@ -95,11 +95,11 @@ class TestUNCHandler(unittest.TestCase):
                     break
             self.assertTrue(warning_printed)
     
-    @patch('unc_handler.UNCTOOLS_AVAILABLE', True)
-    @patch('unc_handler.is_unc_path')
-    @patch('unc_handler.is_network_drive')
-    @patch('unc_handler.is_subst_drive')
-    @patch('unc_handler.convert_to_local')
+    @patch('folder_datetime_fix.unc_handler.UNCTOOLS_AVAILABLE', True)
+    @patch('folder_datetime_fix.unc_handler.is_unc_path')
+    @patch('folder_datetime_fix.unc_handler.is_network_drive')
+    @patch('folder_datetime_fix.unc_handler.is_subst_drive')
+    @patch('folder_datetime_fix.unc_handler.convert_to_local')
     def test_unctools_integration(self, mock_convert, mock_subst, mock_network, mock_unc):
         """Test integration when unctools is available."""
         handler = UNCHandler()
@@ -118,7 +118,7 @@ class TestUNCHandler(unittest.TestCase):
     
     def test_get_path_info(self):
         """Test getting detailed path information."""
-        with patch('unc_handler.UNCTOOLS_AVAILABLE', False):
+        with patch('folder_datetime_fix.unc_handler.UNCTOOLS_AVAILABLE', False):
             handler = UNCHandler()
             
             # Test with existing file (current script)
@@ -134,7 +134,7 @@ class TestUNCHandler(unittest.TestCase):
     
     def test_network_error_handling(self):
         """Test network error handling."""
-        with patch('unc_handler.UNCTOOLS_AVAILABLE', False):
+        with patch('folder_datetime_fix.unc_handler.UNCTOOLS_AVAILABLE', False):
             handler = UNCHandler()
             
             # Test various network errors
@@ -151,7 +151,7 @@ class TestUNCHandler(unittest.TestCase):
     
     def test_prepare_path_list(self):
         """Test preparing multiple paths."""
-        with patch('unc_handler.UNCTOOLS_AVAILABLE', False):
+        with patch('folder_datetime_fix.unc_handler.UNCTOOLS_AVAILABLE', False):
             handler = UNCHandler()
             
             paths = [
@@ -187,8 +187,8 @@ class TestUNCPathInMainScript(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures."""
         # Import main script
-        import mod_fldr_dt
-        self.mod_fldr_dt = mod_fldr_dt
+        from folder_datetime_fix import cli
+        self.mod_fldr_dt = cli
     
     def test_parse_unc_path_argument(self):
         """Test parsing --unc-path argument."""
