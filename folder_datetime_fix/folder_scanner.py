@@ -5,28 +5,38 @@ Folder scanner module for depth-based directory traversal and timestamp collecti
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Set, Tuple
-from .system_files import is_system_generated
+from typing import List, Optional, Set, Tuple, Union
 from .trace_utils import trace
 from .cache import SmartStreamingCache, CacheCompleteness
+from .exclusion_filter import ExclusionFilter
 
 
 class FolderScanner:
     """Scans folders and collects timestamp information based on depth and strategy."""
     
-    def __init__(self, skip_generated: bool = False, verbose: int = 0, use_cache: bool = True):
+    def __init__(self, skip_generated: bool = False, verbose: int = 0, use_cache: bool = True,
+                 exclusion_filter: Optional[ExclusionFilter] = None):
         """
         Initialize the scanner.
         
         Args:
-            skip_generated: If True, exclude system-generated files from timestamp calculation
+            skip_generated: (Legacy) If True, exclude system-generated files from timestamp calculation
             verbose: Verbosity level (0=quiet, 1=basic, 2=detailed, 3=debug, 4=trace)
             use_cache: If True, enable smart caching for performance
+            exclusion_filter: Advanced exclusion filter with glob patterns (overrides skip_generated)
         """
-        self.skip_generated = skip_generated
         self.verbose = verbose
         self.use_cache = use_cache
         self.cache = SmartStreamingCache(memory_limit_mb=100) if use_cache else None
+        
+        # Use exclusion filter if provided, otherwise create from legacy flag
+        if exclusion_filter is not None:
+            self.exclusion_filter = exclusion_filter
+            self.skip_generated = False  # Not used when filter is provided
+        else:
+            # Legacy compatibility
+            self.skip_generated = skip_generated
+            self.exclusion_filter = ExclusionFilter.from_legacy(skip_generated)
     
     def detect_max_depth(self, base_path: Path, limit: int = 100) -> int:
         """
@@ -47,17 +57,22 @@ class FolderScanner:
         
         try:
             for root, dirs, _ in os.walk(base_path):
-                # Filter out system-generated directories from further traversal FIRST
+                # Filter out excluded directories from further traversal FIRST
                 # This must happen before we process the current directory
-                if self.skip_generated and dirs:
+                if dirs:
                     # This modifies dirs in-place to control os.walk traversal
-                    dirs[:] = [d for d in dirs if not is_system_generated(d)]
+                    filtered_dirs = []
+                    for d in dirs:
+                        dir_path = Path(root) / d
+                        if not self.exclusion_filter.should_exclude(dir_path, is_dir=True):
+                            filtered_dirs.append(d)
+                    dirs[:] = filtered_dirs
                 
-                # Skip system-generated directories if needed
-                if self.skip_generated and root != str(base_path):
-                    # Check if current directory name is system-generated
-                    dir_name = Path(root).name
-                    if is_system_generated(dir_name):
+                # Skip excluded directories if needed
+                if root != str(base_path):
+                    # Check if current directory should be excluded
+                    current_path = Path(root)
+                    if self.exclusion_filter.should_exclude(current_path, is_dir=True):
                         # This directory shouldn't have been visited if parent filtered correctly
                         # but handle it anyway for robustness
                         continue
@@ -163,8 +178,8 @@ class FolderScanner:
                 if item.is_dir():
                     continue
                 
-                # Skip system-generated files if flag is set
-                if self.skip_generated and is_system_generated(item.name):
+                # Skip excluded files
+                if self.exclusion_filter.should_exclude(item, is_dir=False):
                     continue
                 
                 try:
@@ -225,8 +240,8 @@ class FolderScanner:
                         # Recurse into subdirectories
                         _scan_recursive(item)
                     else:
-                        # Skip system-generated files if flag is set
-                        if self.skip_generated and is_system_generated(item.name):
+                        # Skip excluded files
+                        if self.exclusion_filter.should_exclude(item, is_dir=False):
                             continue
                         
                         try:

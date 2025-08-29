@@ -40,7 +40,9 @@ Basic Examples:
   {prog3:<55} # Fix only immediate subfolders (short: -f1)
   {prog4:<55} # Fix Projects AND immediate subfolders
   {prog5:<55} # Shortcut for above (folder + children)
-  {prog6:<55} # Fix entire tree recursively  
+  {prog6:<55} # Fix entire tree recursively
+  {prog15:<55} # Process depths 0-3 (simpler than 4x --depth)
+  {prog16:<55} # Process depths 1-4 only
 
 Strategy Examples (shallow/deep/smart):
   {prog7:<55} # Quick scan, immediate files only
@@ -57,8 +59,8 @@ Network Share Examples:
   {prog14:<55} # UNC w/ progress info for all changes
 
 For detailed strategy explanations and performance tips:
-  {prog15:<55} # How scan strategies work
-  {prog16:<55} # How analysis strategies work
+  {prog17:<55} # How scan strategies work
+  {prog18:<55} # How analysis strategies work
   See also: docs/Recipes-and-Examples.md and docs/Performance-Optimization.md
         """.format(
             prog1='%(prog)s --unc-path "\\\\server\\folder" -fa --dry-run -vv',
@@ -75,8 +77,10 @@ For detailed strategy explanations and performance tips:
             prog12="%(prog)s C:\\Big -fa --max-depth 3",
             prog13="%(prog)s //server/share -f2 --dry-run",
             prog14='%(prog)s --unc-path "\\\\server\\folder" -fa -vv',
-            prog15="%(prog)s --help strategy",
-            prog16="%(prog)s --help analyze"
+            prog15="%(prog)s C:\\Code --depth-to 3",
+            prog16="%(prog)s C:\\Projects --depth-from 1 --depth-to 4",
+            prog17="%(prog)s --help strategy",
+            prog18="%(prog)s --help analyze"
         )
     )
     
@@ -100,6 +104,18 @@ For detailed strategy explanations and performance tips:
                        dest='depths',
                        help='Process folders at this depth (can be specified multiple times, or use "infinite" for all depths)')
     
+    # Depth range specification (easier than multiple --depth)
+    parser.add_argument('--depth-to',
+                       type=int,
+                       metavar='N',
+                       help='Process all depths from 0 to N inclusive (e.g., --depth-to 3 means depths 0,1,2,3)')
+    
+    parser.add_argument('--depth-from',
+                       type=int,
+                       default=0,
+                       metavar='N', 
+                       help='Start depth range from N (default: 0, use with --depth-to)')
+    
     # Processing strategy
     parser.add_argument('--strategy', '-s',
                        choices=['shallow', 'deep', 'smart'],
@@ -119,10 +135,30 @@ For detailed strategy explanations and performance tips:
                        action='store_true',
                        help='Fix immediate subfolders only (alias for: --depth 1 --strategy shallow)')
     
-    # System file handling
-    parser.add_argument('--include-generated', '-ig',
-                       action='store_true',
-                       help='Include system-generated files like thumbs.db, desktop.ini (normally skipped)')
+    # Advanced exclusion control
+    exclusion_group = parser.add_argument_group('Exclusion Control')
+    
+    exclusion_group.add_argument('--exclude-mode',
+                                 choices=['default', 'none', 'files', 'folders'],
+                                 default='default',
+                                 help='Base exclusion mode: default=skip system files/folders, '
+                                      'none=include everything, files=skip system files only, '
+                                      'folders=skip system folders only')
+    
+    exclusion_group.add_argument('--exclude',
+                                 metavar='PATTERNS',
+                                 help='Comma-separated glob patterns to exclude '
+                                      '(e.g., "*.tmp,*.bak,build/,**/*.cache")')
+    
+    exclusion_group.add_argument('--include',
+                                 metavar='PATTERNS',
+                                 help='Comma-separated glob patterns to include, overrides excludes '
+                                      '(e.g., ".vscode/settings.json,.git/config")')
+    
+    # Legacy compatibility
+    exclusion_group.add_argument('--include-generated', '-ig',
+                                 action='store_true',
+                                 help='(Legacy) Include all system-generated files - same as --exclude-mode=none')
     
     # Analysis mode
     parser.add_argument('--analyze',
@@ -176,6 +212,22 @@ For detailed strategy explanations and performance tips:
                 except ValueError:
                     parser.error(f"Invalid depth value: {depth_str}. Use integers or 'infinite'")
         args.depths = processed_depths
+    
+    # Process depth range (--depth-to and --depth-from)
+    if args.depth_to is not None:
+        if not args.depths:
+            args.depths = []
+        
+        # Validate range
+        if args.depth_from > args.depth_to:
+            parser.error(f"--depth-from ({args.depth_from}) cannot be greater than --depth-to ({args.depth_to})")
+        
+        # Add the range
+        depth_range = range(args.depth_from, args.depth_to + 1)
+        args.depths.extend(depth_range)
+        
+        if args.verbose >= 1:
+            print(f"Depth range expanded: {args.depth_from} to {args.depth_to} = {list(depth_range)}")
     
     # Process convenience aliases
     if args.fix_2:
@@ -296,6 +348,13 @@ def main():
         print(f"ERROR: Path is not a directory: {target_path}", file=sys.stderr)
         return 1
     
+    # Handle legacy --include-generated flag BEFORE printing header
+    if args.include_generated:
+        if args.exclude_mode == 'default':
+            args.exclude_mode = 'none'
+            if args.verbose > 0 and not args.quiet:
+                print("Note: --include-generated is deprecated. Use --exclude-mode=none")
+    
     # Print header
     if not args.quiet:
         print("=" * 50)
@@ -310,15 +369,29 @@ def main():
             print(f"Type:          Substituted Drive")
         print(f"Depths:        {args.depths}")
         print(f"Strategy:      {args.strategy}")
-        print(f"System Files:  {'INCLUDED' if args.include_generated else 'SKIPPED (default)'}")
+        print(f"Exclusions:    Mode={args.exclude_mode}", end="")
+        if args.exclude:
+            print(f", Exclude={args.exclude[:30]}{'...' if len(args.exclude) > 30 else ''}", end="")
+        if args.include:
+            print(f", Include={args.include[:30]}{'...' if len(args.include) > 30 else ''}", end="")
+        print()
         print(f"Mode:          {'DRY RUN' if args.dry_run else 'EXECUTE'}")
         if is_network and unc_handler.unctools_available:
             print(f"UNCtools:      Enabled")
         print("=" * 50)
         print()
     
-    # Default behavior is to skip system files unless --include-generated is specified
-    skip_system_files = not args.include_generated
+    # Create exclusion filter
+    from .exclusion_filter import ExclusionFilter
+    
+    exclusion_filter = ExclusionFilter.from_args(
+        mode=args.exclude_mode,
+        exclude=args.exclude,
+        include=args.include
+    )
+    
+    # For backward compatibility in visualization
+    skip_system_files = (args.exclude_mode == 'default')
     
     # Handle visualization mode
     if args.visualize:
@@ -364,7 +437,7 @@ def main():
     
     # Initialize components
     verbosity = args.verbose if not args.quiet else 0
-    scanner = FolderScanner(skip_generated=skip_system_files, verbose=verbosity)
+    scanner = FolderScanner(exclusion_filter=exclusion_filter, verbose=verbosity)
     fixer = TimestampFixer(dry_run=args.dry_run, verbose=verbosity)
     
     # Create analysis strategy based on --analyze parameter

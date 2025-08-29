@@ -16,14 +16,18 @@ Components:
 
 # Semantic version components
 MAJOR = 0
-MINOR = 5
-PATCH = 6
+MINOR = 6
+PATCH = 1
+
+# Optional release phase (alpha, beta, rc1, rc2, etc.)
+# Set to None for stable releases
+PHASE = None  # Options: None, "alpha", "beta", "rc1", "rc2", etc.
 
 # Full version string - updated by git pre-commit hook
 # DO NOT EDIT THIS LINE MANUALLY
 # Note: Hash reflects the commit this version builds upon (HEAD at commit time)
 # The hash will be one commit behind after the commit is created (git limitation)
-__version__ = "0.5.6_private_28-20250829-1fb12420"
+__version__ = "0.6.1_private_29-20250829-6c4ff340"
 
 
 def get_version():
@@ -32,14 +36,21 @@ def get_version():
 
 
 def get_base_version():
-    """Return the semantic version string (MAJOR.MINOR.PATCH)."""
+    """Return the semantic version string (MAJOR.MINOR.PATCH) with optional phase."""
     # Extract base version from __version__ string to maintain single source of truth
     # Format: VERSION_BRANCH_BUILD-DATE-HASH
     # Example: 0.5.1_private_13-20250828-ad442287 -> 0.5.1
     if '_' in __version__:
-        return __version__.split('_')[0]
-    # Fallback if __version__ doesn't have expected format
-    return f"{MAJOR}.{MINOR}.{PATCH}"
+        base = __version__.split('_')[0]
+    else:
+        # Fallback if __version__ doesn't have expected format
+        base = f"{MAJOR}.{MINOR}.{PATCH}"
+    
+    # Add phase if specified
+    if PHASE:
+        base = f"{base}-{PHASE}"
+    
+    return base
 
 
 def get_version_dict():
