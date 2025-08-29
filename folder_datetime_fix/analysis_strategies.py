@@ -129,8 +129,8 @@ class TreeStrategy(AnalysisStrategy):
     """Memory-efficient tree structure with bottom-up timestamp computation."""
     
     class FolderNode:
-        """Minimal folder node for tree structure."""
-        __slots__ = ['name', 'depth', 'children', 'computed_mtime', 'is_calculated', 'full_path']
+        """Minimal folder node for tree structure with completeness tracking."""
+        __slots__ = ['name', 'depth', 'children', 'computed_mtime', 'is_calculated', 'full_path', 'completeness', 'has_subdirs']
         
         def __init__(self, name: str, depth: int, full_path: Path):
             self.name = name
@@ -139,6 +139,8 @@ class TreeStrategy(AnalysisStrategy):
             self.computed_mtime = None
             self.is_calculated = False
             self.full_path = full_path
+            self.completeness = None  # Will be set based on scan depth
+            self.has_subdirs = False  # Will be updated during tree building
     
     def __init__(self, scanner: FolderScanner):
         """
@@ -186,17 +188,20 @@ class TreeStrategy(AnalysisStrategy):
         
         try:
             import os
+            has_subdirs = False
             for entry in os.scandir(path):
                 if entry.is_dir() and not is_system_generated(entry.name):
+                    has_subdirs = True
                     child_path = Path(entry.path)
                     child = self.FolderNode(entry.name, node.depth + 1, child_path)
                     node.children.append(child)
                     self._build_tree(child, child_path, max_depth)
+            node.has_subdirs = has_subdirs
         except (PermissionError, OSError):
             pass
     
     def _compute_timestamps_bottom_up(self, node: FolderNode) -> Optional[datetime]:
-        """Compute timestamps using bottom-up traversal."""
+        """Compute timestamps using bottom-up traversal and store in cache."""
         if node.is_calculated:
             return node.computed_mtime
         
@@ -217,6 +222,30 @@ class TreeStrategy(AnalysisStrategy):
         
         node.computed_mtime = max_time
         node.is_calculated = True
+        
+        # Store result in cache with completeness tracking
+        if self.scanner.cache and max_time:
+            from .cache import CacheCompleteness, SmartCacheEntry
+            import time
+            
+            # Determine completeness based on children
+            if not node.has_subdirs:
+                completeness = CacheCompleteness.COMPLETE
+            else:
+                # For tree mode, we compute all depths, so mark as complete
+                completeness = CacheCompleteness.COMPLETE
+            
+            cache_entry = SmartCacheEntry(
+                path=node.full_path,
+                computed_mtime=max_time.timestamp() if max_time else 0,
+                completeness=completeness,
+                has_subdirs=node.has_subdirs,
+                file_count=0,  # Not tracked in tree mode
+                actual_depth=999,  # Tree mode processes all depths
+                computation_time=time.time()
+            )
+            self.scanner.cache.cache[node.full_path] = cache_entry
+        
         return max_time
     
     def _extract_at_depths(self, node: FolderNode, depth_set: set, results: list):
