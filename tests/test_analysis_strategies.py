@@ -101,15 +101,32 @@ class TestAnalysisStrategies(unittest.TestCase):
         self.assertIsInstance(results, list)
         self.assertTrue(len(results) > 0)
     
-    def test_tree_strategy_placeholder(self):
-        """Test TreeStrategy (currently placeholder)."""
+    def test_tree_strategy(self):
+        """Test TreeStrategy with bottom-up computation."""
         strategy = TreeStrategy(self.scanner)
         self.assertEqual(strategy.get_name(), 'tree')
-        self.assertIn('future', strategy.get_description().lower())
+        self.assertIn('tree', strategy.get_description().lower())
+        self.assertIn('bottom-up', strategy.get_description().lower())
         
-        # Should fall back to deep scanning for now
+        # Should work with tree structure
         results = strategy.analyze(Path(self.test_dir), [0])
         self.assertIsInstance(results, list)
+        # Tree mode computes timestamps
+        self.assertTrue(len(results) > 0)
+    
+    def test_folder_only_strategy(self):
+        """Test FolderOnlyStrategy (ultra-minimal mode)."""
+        from folder_datetime_fix.analysis_strategies import FolderOnlyStrategy
+        strategy = FolderOnlyStrategy(self.scanner)
+        self.assertEqual(strategy.get_name(), 'folder-only')
+        self.assertIn('minimal', strategy.get_description().lower())
+        
+        # Should work computing timestamps without storing files
+        results = strategy.analyze(Path(self.test_dir), [0])
+        self.assertIsInstance(results, list)
+        # Folders with files should have computed timestamps
+        # Empty folders might have None
+        self.assertTrue(len(results) > 0)
     
     def test_auto_strategy_local(self):
         """Test AutoStrategy on local path."""
@@ -188,7 +205,8 @@ class TestAnalysisStrategies(unittest.TestCase):
         self.assertIn('standard', strategies)
         self.assertIn('low-memory', strategies)
         self.assertIn('tree', strategies)
-        self.assertEqual(len(strategies), 4)
+        self.assertIn('folder-only', strategies)
+        self.assertEqual(len(strategies), 5)
     
     def test_strategy_with_empty_folders(self):
         """Test strategies handle empty folders correctly."""

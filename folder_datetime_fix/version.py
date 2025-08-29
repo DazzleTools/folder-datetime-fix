@@ -23,7 +23,7 @@ PATCH = 5
 # DO NOT EDIT THIS LINE MANUALLY
 # Note: Hash reflects the commit this version builds upon (HEAD at commit time)
 # The hash will be one commit behind after the commit is created (git limitation)
-__version__ = "0.5.5_private_25-20250829-8550cfc9"
+__version__ = "0.5.5_private_26-20250829-4701ad62"
 
 
 def get_version():

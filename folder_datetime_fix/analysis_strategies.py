@@ -126,7 +126,19 @@ class LowMemoryStrategy(AnalysisStrategy):
 
 
 class TreeStrategy(AnalysisStrategy):
-    """Tree-based strategy with in-memory n-ary tree structure."""
+    """Memory-efficient tree structure with bottom-up timestamp computation."""
+    
+    class FolderNode:
+        """Minimal folder node for tree structure."""
+        __slots__ = ['name', 'depth', 'children', 'computed_mtime', 'is_calculated', 'full_path']
+        
+        def __init__(self, name: str, depth: int, full_path: Path):
+            self.name = name
+            self.depth = depth
+            self.children = []
+            self.computed_mtime = None
+            self.is_calculated = False
+            self.full_path = full_path
     
     def __init__(self, scanner: FolderScanner):
         """
@@ -136,25 +148,221 @@ class TreeStrategy(AnalysisStrategy):
             scanner: FolderScanner instance
         """
         super().__init__(scanner)
-        self.tree = None
+        self.root = None
+        # Use moderate caching for tree mode
+        self.scanner.use_cache = True
     
     @trace
     def analyze(self, base_path: Path, depths: List[int]) -> List[Tuple[Path, Optional[datetime]]]:
-        """Build tree structure and analyze."""
-        # For now, fall back to standard until tree implementation is complete
-        # TODO: Implement actual tree building and analysis
-        return self.scanner.scan_and_collect(
-            base_path,
-            depths,
-            strategy='deep',
-            use_max_depth_detection=True
-        )
+        """Build tree structure and compute timestamps bottom-up."""
+        from .system_files import is_system_generated
+        
+        base_path = Path(base_path).resolve()
+        depth_set = set(depths) if depths else set(range(100))
+        
+        # Build tree structure
+        self.root = self.FolderNode(base_path.name, 0, base_path)
+        self._build_tree(self.root, base_path, max(depths) if depths else 100)
+        
+        # Compute timestamps bottom-up
+        self._compute_timestamps_bottom_up(self.root)
+        
+        # Extract results for requested depths
+        results = []
+        self._extract_at_depths(self.root, depth_set, results)
+        
+        if self.scanner.verbose >= 1:
+            total_folders = len(results)
+            print(f"Tree mode: Processed {total_folders:,} folders with bottom-up computation")
+        
+        return results
+    
+    def _build_tree(self, node: FolderNode, path: Path, max_depth: int):
+        """Build tree structure recursively."""
+        from .system_files import is_system_generated
+        
+        if node.depth >= max_depth:
+            return
+        
+        try:
+            import os
+            for entry in os.scandir(path):
+                if entry.is_dir() and not is_system_generated(entry.name):
+                    child_path = Path(entry.path)
+                    child = self.FolderNode(entry.name, node.depth + 1, child_path)
+                    node.children.append(child)
+                    self._build_tree(child, child_path, max_depth)
+        except (PermissionError, OSError):
+            pass
+    
+    def _compute_timestamps_bottom_up(self, node: FolderNode) -> Optional[datetime]:
+        """Compute timestamps using bottom-up traversal."""
+        if node.is_calculated:
+            return node.computed_mtime
+        
+        # First compute all children (bottom-up)
+        max_time = None
+        for child in node.children:
+            child_time = self._compute_timestamps_bottom_up(child)
+            if child_time and (not max_time or child_time > max_time):
+                max_time = child_time
+        
+        # Then compute this folder's timestamp
+        folder_time = self.scanner.get_smart_timestamp(node.full_path)
+        
+        # Use the maximum of folder's own time and children's times
+        if folder_time:
+            if not max_time or folder_time > max_time:
+                max_time = folder_time
+        
+        node.computed_mtime = max_time
+        node.is_calculated = True
+        return max_time
+    
+    def _extract_at_depths(self, node: FolderNode, depth_set: set, results: list):
+        """Extract folders at requested depths."""
+        if node.depth in depth_set:
+            results.append((node.full_path, node.computed_mtime))
+        
+        for child in node.children:
+            self._extract_at_depths(child, depth_set, results)
     
     def get_name(self) -> str:
         return "tree"
     
     def get_description(self) -> str:
-        return "Tree-based analysis with n-ary structure (future enhancement)"
+        return "Memory-efficient tree with bottom-up timestamp computation"
+
+
+class FolderOnlyStrategy(AnalysisStrategy):
+    """Ultra-minimal mode - computes timestamps without storing files in memory."""
+    
+    def __init__(self, scanner: FolderScanner):
+        """
+        Initialize folder-only strategy.
+        Processes files on-the-fly without storing them.
+        
+        Args:
+            scanner: FolderScanner instance
+        """
+        super().__init__(scanner)
+        # Enable cache for storing computed timestamps
+        # But we won't store file lists, just the results
+        self.scanner.use_cache = True
+    
+    @trace
+    def analyze(self, base_path: Path, depths: List[int]) -> List[Tuple[Path, Optional[datetime]]]:
+        """
+        Process folders efficiently by computing timestamps on-the-fly.
+        Files are processed but not stored in memory.
+        """
+        import os
+        from datetime import datetime
+        from .system_files import is_system_generated
+        
+        results = []
+        base_path = Path(base_path).resolve()
+        
+        # Convert depths list to a set for O(1) lookup
+        depth_set = set(depths) if depths else set(range(100))
+        
+        # Track folders at each depth for statistics
+        folders_by_depth = {}
+        folders_with_timestamps = 0
+        
+        # Walk the tree and compute timestamps on-the-fly
+        for root, dirs, files in os.walk(base_path):
+            root_path = Path(root)
+            
+            # Calculate current depth
+            try:
+                relative = root_path.relative_to(base_path)
+                current_depth = len(relative.parts)
+            except ValueError:
+                current_depth = 0
+            
+            # Skip if depth not requested
+            if current_depth not in depth_set:
+                # Still need to filter dirs for next iteration
+                if self.scanner.skip_generated and dirs:
+                    dirs[:] = [d for d in dirs if not is_system_generated(d)]
+                continue
+            
+            # Filter system directories before processing
+            if self.scanner.skip_generated and dirs:
+                dirs[:] = [d for d in dirs if not is_system_generated(d)]
+            
+            # Compute timestamp for this folder by processing files on-the-fly
+            # This is the key difference - we compute but don't store files
+            max_time = None
+            
+            try:
+                # Process files immediately without storing them
+                for file in files:
+                    if self.scanner.skip_generated and is_system_generated(file):
+                        continue
+                    
+                    file_path = root_path / file
+                    try:
+                        mtime = file_path.stat().st_mtime
+                        file_datetime = datetime.fromtimestamp(mtime)
+                        
+                        if max_time is None or file_datetime > max_time:
+                            max_time = file_datetime
+                    except (OSError, PermissionError):
+                        continue
+                
+                # Also check immediate subdirectory timestamps
+                for dir_name in dirs:
+                    if self.scanner.skip_generated and is_system_generated(dir_name):
+                        continue
+                    
+                    dir_path = root_path / dir_name
+                    try:
+                        mtime = dir_path.stat().st_mtime
+                        dir_datetime = datetime.fromtimestamp(mtime)
+                        
+                        if max_time is None or dir_datetime > max_time:
+                            max_time = dir_datetime
+                    except (OSError, PermissionError):
+                        continue
+                        
+            except (OSError, PermissionError):
+                pass
+            
+            # Add result with computed timestamp
+            results.append((root_path, max_time))
+            
+            if max_time is not None:
+                folders_with_timestamps += 1
+            
+            # Track folder count by depth for statistics
+            if current_depth not in folders_by_depth:
+                folders_by_depth[current_depth] = 0
+            folders_by_depth[current_depth] += 1
+            
+            # Stop traversing deeper if we've exceeded all requested depths
+            if depths and current_depth >= max(depths):
+                dirs.clear()
+        
+        # Report statistics if verbose
+        if self.scanner.verbose >= 1:
+            total_folders = len(results)
+            print(f"FolderOnly mode: Processed {total_folders:,} folders")
+            print(f"  Computed timestamps: {folders_with_timestamps:,}")
+            print(f"  Without timestamps: {total_folders - folders_with_timestamps:,}")
+            if self.scanner.verbose >= 2 and folders_by_depth:
+                print("Folders by depth:")
+                for depth in sorted(folders_by_depth.keys()):
+                    print(f"  Depth {depth}: {folders_by_depth[depth]:,} folders")
+        
+        return results
+    
+    def get_name(self) -> str:
+        return "folder-only"
+    
+    def get_description(self) -> str:
+        return "Ultra-minimal mode - computes timestamps without storing files"
 
 
 class AutoStrategy(AnalysisStrategy):
@@ -313,6 +521,8 @@ class StrategyFactory:
         # Create base strategy
         if primary == 'tree':
             strategy = TreeStrategy(scanner)
+        elif primary == 'folder-only' or primary == 'folders':
+            strategy = FolderOnlyStrategy(scanner)
         elif primary == 'low-memory' or force_low_memory:
             strategy = LowMemoryStrategy(scanner, scan_strategy)
         elif primary == 'auto':
@@ -331,4 +541,4 @@ class StrategyFactory:
     @staticmethod
     def get_available_strategies() -> List[str]:
         """Return list of available strategy names."""
-        return ['auto', 'standard', 'low-memory', 'tree']
+        return ['auto', 'standard', 'low-memory', 'tree', 'folder-only']

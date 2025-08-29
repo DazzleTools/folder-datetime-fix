@@ -16,9 +16,11 @@ from .folder_scanner import FolderScanner
 from .timestamp_fixer import TimestampFixer
 from .unc_handler import get_unc_handler
 from .strategy_help import print_strategy_help
+from .analyze_help import print_analyze_help
 from .version import __version__, get_base_version
 from .trace_utils import trace, set_verbosity
 from .analysis_strategies import StrategyFactory
+from .tree_visualizer import TreeVisualizer
 
 MAX_DEPTH_INFINITE = 100  # Reasonable maximum for "infinite" depth
 
@@ -55,7 +57,8 @@ Network Share Examples:
   {prog14:<55} # UNC w/ progress info for all changes
 
 For detailed strategy explanations and performance tips:
-  {prog15:<55} # How strategies work
+  {prog15:<55} # How scan strategies work
+  {prog16:<55} # How analysis strategies work
   See also: docs/Recipes-and-Examples.md and docs/Performance-Optimization.md
         """.format(
             prog1='%(prog)s --unc-path "\\\\server\\folder" -fa --dry-run -vv',
@@ -72,7 +75,8 @@ For detailed strategy explanations and performance tips:
             prog12="%(prog)s C:\\Big -fa --max-depth 3",
             prog13="%(prog)s //server/share -f2 --dry-run",
             prog14='%(prog)s --unc-path "\\\\server\\folder" -fa -vv',
-            prog15="%(prog)s --help strategy"
+            prog15="%(prog)s --help strategy",
+            prog16="%(prog)s --help analyze"
         )
     )
     
@@ -125,6 +129,11 @@ For detailed strategy explanations and performance tips:
                        default='auto',
                        help='Analysis strategy: tree (full memory), low-memory (streaming), auto (adaptive), or comma-separated options like tree,ctime (default: auto)')
     
+    # Debug visualization
+    parser.add_argument('--visualize',
+                       action='store_true',
+                       help='Show visual tree structure of what will be processed (debug mode)')
+    
     # Execution modes
     parser.add_argument('--dry-run', '-n',
                        action='store_true',
@@ -133,7 +142,7 @@ For detailed strategy explanations and performance tips:
     parser.add_argument('--verbose', '-v',
                        action='count',
                        default=0,
-                       help='Increase verbosity (-v=basic, -vv=detailed, -vvv=debug, -vvvv=trace)')
+                       help='Increase verbosity (-v=basic info, -vv=detailed, -vvv=debug with tree view, -vvvv=trace)')
     
     parser.add_argument('--quiet', '-q',
                        action='store_true',
@@ -212,6 +221,16 @@ def format_timestamp(dt: datetime) -> str:
     return 'N/A'
 
 
+def _count_tree_nodes(node) -> int:
+    """Count total nodes in a tree structure."""
+    if not node:
+        return 0
+    count = 1
+    for child in node.children:
+        count += _count_tree_nodes(child)
+    return count
+
+
 @trace
 def print_summary(stats: dict, verbose: bool = False):
     """Print execution summary."""
@@ -233,9 +252,13 @@ def print_summary(stats: dict, verbose: bool = False):
 def main():
     """Main entry point."""
     # Check for special help commands first
-    if len(sys.argv) >= 3 and sys.argv[1] == '--help' and sys.argv[2] == 'strategy':
-        print_strategy_help()
-        return 0
+    if len(sys.argv) >= 3 and sys.argv[1] == '--help':
+        if sys.argv[2] == 'strategy':
+            print_strategy_help()
+            return 0
+        elif sys.argv[2] == 'analyze':
+            print_analyze_help()
+            return 0
     
     args = parse_arguments()
     
@@ -294,9 +317,52 @@ def main():
         print("=" * 50)
         print()
     
-    # Initialize components
     # Default behavior is to skip system files unless --include-generated is specified
     skip_system_files = not args.include_generated
+    
+    # Handle visualization mode
+    if args.visualize:
+        # Detect if we can use Unicode
+        try:
+            # Try to encode a test emoji
+            test_char = "📁"
+            test_char.encode(sys.stdout.encoding or 'utf-8')
+            use_unicode = True
+        except (UnicodeEncodeError, LookupError):
+            use_unicode = False
+            if sys.platform == 'win32':
+                print("Note: Using ASCII characters. For better visuals, run: chcp 65001")
+                print()
+        
+        visualizer = TreeVisualizer(
+            use_unicode=use_unicode,
+            show_timestamps=True,
+            show_sizes=True,
+            show_depth=True
+        )
+        
+        print("\nVISUALIZATION MODE")
+        print("=" * 50)
+        print("Showing tree structure that will be processed:")
+        print()
+        
+        # Determine max depth for visualization
+        max_viz_depth = max(args.depths) if args.depths else 3
+        
+        # Visualize the tree
+        tree_output = visualizer.visualize_path(
+            target_path,
+            max_depth=max_viz_depth + 1,  # Show one level deeper for context
+            skip_hidden=False,
+            skip_system=skip_system_files,
+            use_ascii=not use_unicode
+        )
+        print(tree_output)
+        
+        print("\nNote: This is a preview. Run without --visualize to actually process folders.")
+        return 0
+    
+    # Initialize components
     verbosity = args.verbose if not args.quiet else 0
     scanner = FolderScanner(skip_generated=skip_system_files, verbose=verbosity)
     fixer = TimestampFixer(dry_run=args.dry_run, verbose=verbosity)
@@ -315,6 +381,56 @@ def main():
     
     if not args.quiet:
         print(f"Found {len(scan_results)} folders to process\n")
+    
+    # Show tree visualization at high verbosity
+    if verbosity >= 3 and not args.quiet:
+        print("Tree Structure Analyzed:")
+        print("-" * 50)
+        
+        # Use TreeVisualizer to show the results
+        try:
+            test_char = "📁"
+            test_char.encode(sys.stdout.encoding or 'utf-8')
+            use_unicode = True
+        except (UnicodeEncodeError, LookupError):
+            use_unicode = False
+        
+        visualizer = TreeVisualizer(
+            use_unicode=use_unicode,
+            show_timestamps=True,
+            show_sizes=False,
+            show_depth=True
+        )
+        
+        # Create a simplified visualization from results
+        if hasattr(strategy, 'root') and strategy.root:
+            # TreeStrategy has a tree structure we can visualize
+            print("TreeStrategy Node Structure:")
+            # We'll show the tree structure that was built
+            # This is a bit complex, so for now just show stats
+            node_count = _count_tree_nodes(strategy.root)
+            print(f"  Total nodes in memory: {node_count}")
+            print(f"  Nodes at requested depths: {len(scan_results)}")
+        else:
+            # Show first few results
+            print("Folders to be processed:")
+            for i, (path, timestamp) in enumerate(scan_results[:10]):
+                try:
+                    rel_path = path.relative_to(target_path)
+                    depth = len(rel_path.parts)
+                except:
+                    rel_path = path.name
+                    depth = 0
+                    
+                indent = "  " * depth
+                ts_str = timestamp.strftime('%Y-%m-%d %H:%M:%S') if timestamp else "No timestamp"
+                print(f"{indent}[DIR] {rel_path} [{ts_str}]")
+                
+            if len(scan_results) > 10:
+                print(f"  ... and {len(scan_results) - 10} more folders")
+        
+        print("-" * 50)
+        print()
     
     # Apply fixes
     if not args.quiet:
