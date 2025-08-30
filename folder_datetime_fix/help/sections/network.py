@@ -2,6 +2,73 @@
 Network share examples help section with context-aware content.
 """
 
+from ...help_system import HelpContent, HelpSection
+
+# Define all network help content items for this section
+NETWORK_CONTENT = [
+    HelpContent(
+        id='network.quick_start',
+        command='{prog} --unc-path "\\\\server\\folder" -fa --dry-run -vv',
+        description='Preview all fixes (safe)',
+        category='network',
+        contexts={'minimal', 'standard', 'full'},
+        priority=5
+    ),
+    
+    HelpContent(
+        id='network.preview_two_level',
+        command='{prog} //server/share -f2 --dry-run',
+        description='Preview 2 level changes',
+        category='network',
+        contexts={'standard', 'full'},
+        priority=10
+    ),
+    
+    HelpContent(
+        id='network.unc_progress',
+        command='{prog} --unc-path "\\\\server\\folder" -fa -vv',
+        description='UNC with progress info',
+        category='network',
+        contexts={'standard', 'full'},
+        priority=15
+    ),
+    
+    HelpContent(
+        id='network.unc_preview',
+        command='{prog} --unc-path "\\\\server\\folder" -fa --dry-run -vv',
+        description='Preview all fixes',
+        category='network',
+        contexts={'full'},
+        priority=20
+    ),
+    
+    HelpContent(
+        id='network.mapped_root',
+        command='{prog} Z:\\ --depth 0',
+        description='Fix mapped drive root',
+        category='network',
+        contexts={'full'},
+        priority=25
+    ),
+    
+    HelpContent(
+        id='network.nas_photos',
+        command='{prog} //nas/photos --strategy deep -fa',
+        description='NAS photo archive fix',
+        category='network',
+        contexts={'full'},
+        priority=30
+    ),
+]
+
+# Create the section and add all items
+network_section = HelpSection('network', 'Network Share Examples')
+for item in NETWORK_CONTENT:
+    network_section.add_item(item)
+
+# Export items for external access
+NETWORK_ITEMS = {item.id: item for item in NETWORK_CONTENT}
+
 
 def get_title() -> str:
     """Get section title."""

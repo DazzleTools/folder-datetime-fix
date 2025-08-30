@@ -15,8 +15,7 @@ from datetime import datetime
 from .folder_scanner import FolderScanner
 from .timestamp_fixer import TimestampFixer
 from .unc_handler import get_unc_handler
-from .strategy_help import print_strategy_help
-from .analyze_help import print_analyze_help
+from .help_topics import handle_help_topic
 from .version import __version__, get_base_version
 from .trace_utils import trace, set_verbosity
 from .analysis_strategies import StrategyFactory
@@ -47,7 +46,7 @@ For specific topics: %(prog)s --help <topic>{tip_line}"""
 def get_standard_epilog():
     """Get standard examples for --help - shows all sections."""
     # Import sections here to avoid circular imports
-    from .help.sections import quick_start, basic, strategy, advanced, network, tips
+    from .help.sections import quick_start, basic, strategy, advanced, network, detailed_help, tips
     
     sections = []
     
@@ -68,14 +67,11 @@ def get_standard_epilog():
     # Network Share Examples
     sections.append(network.get_short('%(prog)s'))
     
-    # Footer with help topics
-    sections.append("""For detailed help on specific topics:
-  %(prog)s --help strategy                               # How scan strategies work
-  %(prog)s --help analyze                                # How analysis strategies work
-  %(prog)s --help patterns                               # Exclude/include patterns guide
-  %(prog)s --help layers                                 # How options layer together
-
-See also: docs/Recipes-and-Examples.md""")
+    # Detailed help topics
+    sections.append(detailed_help.get_short('%(prog)s'))
+    
+    # Footer
+    sections.append("See also: docs/Recipes-and-Examples.md")
     
     # Add a random tip - we're showing all sections, so exclude none from tip selection
     # This ensures the tip doesn't duplicate what we're already showing
@@ -86,15 +82,76 @@ See also: docs/Recipes-and-Examples.md""")
     return '\n\n'.join(sections)
 
 
-def create_parser(show_full_help=False):
-    """Create the argument parser with appropriate epilog and all arguments."""
-    epilog = get_standard_epilog() if show_full_help else get_minimal_epilog()
+class MinimalHelpParser(argparse.ArgumentParser):
+    """Custom parser that shows minimal help when no path is provided."""
     
-    parser = argparse.ArgumentParser(
+    def error(self, message):
+        """Override error to show minimal help for missing path."""
+        # Check if this is the "required argument" error for path
+        if 'the following arguments are required: path' in message or 'too few arguments' in message:
+            # Print just usage line
+            self.print_usage(sys.stderr)
+            sys.stderr.write('\n')
+            # Print our custom minimal help
+            print_custom_minimal_help()
+            self.exit(2)
+        else:
+            # For other errors, use default behavior (shows just usage + error)
+            super().error(message)
+
+
+def print_custom_minimal_help():
+    """Print custom minimal help with examples but no options list."""
+    prog = Path(sys.argv[0]).name
+    
+    print("Fix folder modified timestamps to match their content (system files skipped by default)")
+    print()
+    
+    # Import sections and help system
+    from .help.sections import ALL_SECTIONS, get_items_for_context
+    from .help_system import HelpBuilder
+    
+    # Create a help builder for minimal context
+    builder = HelpBuilder(prog=prog)
+    
+    # Add all sections - they will filter their content based on context
+    for section in ALL_SECTIONS.values():
+        builder.add_section(section)
+    
+    # Build and print the minimal help using 'minimal' context
+    minimal_help = builder.build_minimal_help(
+        section_ids=['basic', 'strategy', 'advanced', 'network', 'detailed_help'],
+        max_per_section=10
+    )
+    print(minimal_help)
+    
+    # Add a random tip from non-displayed content
+    tip = builder.get_random_tip(exclude_displayed=True)
+    if tip:
+        print()
+        print(tip)
+
+
+def create_parser(show_full_help=False, show_brief_help=False):
+    """Create the argument parser with appropriate epilog and all arguments."""
+    if show_full_help:
+        epilog = get_standard_epilog()
+    elif show_brief_help:
+        # For -h, add a small note about more help
+        epilog = "\nFor more detailed help and examples:\n  %(prog)s --help\n  %(prog)s --help <topic>  (e.g., --help strategy)"
+    else:
+        epilog = ""  # No epilog for minimal case
+    
+    # Use custom parser class
+    parser = MinimalHelpParser(
         description='Fix folder modified timestamps to match their content (system files skipped by default)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=epilog
+        epilog=epilog,
+        add_help=True  # Keep help enabled
     )
+    
+    # Override the help action to clarify -h vs --help
+    parser._optionals.title = 'options'
     
     # Version information
     parser.add_argument('--version', '-V',
@@ -214,13 +271,20 @@ def create_parser(show_full_help=False):
 @trace
 def parse_arguments(argv=None):
     """Parse command-line arguments."""
-    # Determine if user is asking for full help
+    # Determine if user is asking for help and which type
     # Check both argv and sys.argv to catch all cases
     import sys
     show_full_help = (argv and '--help' in argv) or (not argv and '--help' in sys.argv)
+    show_brief_help = (argv and '-h' in argv and '--help' not in argv) or \
+                      (not argv and '-h' in sys.argv and '--help' not in sys.argv)
     
-    # Create parser with appropriate epilog and all arguments
-    parser = create_parser(show_full_help)
+    # Create parser with appropriate epilog
+    if show_brief_help:
+        # For -h, add a small note about more help being available
+        parser = create_parser(show_full_help=False, show_brief_help=True)
+    else:
+        # For --help or normal operation
+        parser = create_parser(show_full_help=show_full_help, show_brief_help=False)
     
     # Parse the arguments
     args = parser.parse_args(argv)
@@ -329,14 +393,12 @@ def print_summary(stats: dict, verbose: bool = False):
 @trace
 def main():
     """Main entry point."""
-    # Check for special help commands first
-    if len(sys.argv) >= 3 and sys.argv[1] == '--help':
-        if sys.argv[2] == 'strategy':
-            print_strategy_help()
+    # Check for special help commands first (both -h and --help)
+    if len(sys.argv) >= 3 and sys.argv[1] in ['-h', '--help']:
+        topic = sys.argv[2]
+        if handle_help_topic(topic):
             return 0
-        elif sys.argv[2] == 'analyze':
-            print_analyze_help()
-            return 0
+        # If topic wasn't handled, fall through to normal argument parsing
     
     parser, args = parse_arguments()
     
@@ -350,8 +412,15 @@ def main():
     elif args.path:
         path_to_use = args.path
     else:
-        # No path provided - show help using the parser we already created
-        parser.print_help()
+        # No path provided - show minimal help
+        prog = Path(sys.argv[0]).name
+        print(f"usage: {prog} [-h] [--version] [--unc-path UNC_PATH] [--depth DEPTHS] [--depth-to N] [--depth-from N]")
+        print(f"                 [--strategy {{shallow,deep,smart}}] [--fix-2] [--fix-all] [--fix-immediate]")
+        print(f"                 [--exclude-mode {{default,none,files,folders}}] [--exclude PATTERNS] [--include PATTERNS] [--include-generated]")
+        print(f"                 [--analyze ANALYZE] [--visualize] [--dry-run] [--verbose] [--quiet] [--report FILE] [--max-depth N]")
+        print(f"                 [path]")
+        print()
+        print_custom_minimal_help()
         return 1
     
     # Initialize UNC handler for network path support

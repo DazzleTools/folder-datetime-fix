@@ -2,6 +2,102 @@
 Basic examples help section with context-aware content.
 """
 
+from ...help_system import HelpContent, HelpSection
+
+# Define all basic help content items for this section
+BASIC_CONTENT = [
+    HelpContent(
+        id='basic.f2',
+        command='{prog} . -f2',
+        description='Fix current + immediate children',
+        category='basic',
+        contexts={'minimal', 'standard', 'full', 'tutorial'},
+        priority=10
+    ),
+    
+    HelpContent(
+        id='basic.f2_with_path',
+        command='{prog} {path} -f2',
+        description='Fix folder + immediate children',
+        category='basic',
+        contexts={'standard', 'full'},
+        priority=12,
+        variables={'path': 'C:\\Projects'}
+    ),
+    
+    HelpContent(
+        id='basic.dry_run',
+        command='{prog} . -fa --dry-run',
+        description='Preview all changes (safe)',
+        category='basic',
+        contexts={'minimal', 'standard', 'full', 'error', 'tutorial'},
+        priority=5
+    ),
+    
+    HelpContent(
+        id='basic.recursive',
+        command='{prog} {path} -fa',
+        description='Fix entire tree recursively',
+        category='basic',
+        contexts={'minimal', 'standard', 'full', 'tutorial'},
+        priority=15,
+        variables={'path': 'C:\\Projects'}
+    ),
+    
+    HelpContent(
+        id='basic.depth_only_root',
+        command='{prog} . --depth 0',
+        description='Fix root folder only (no children)',
+        category='basic',
+        contexts={'standard', 'full'},
+        priority=20
+    ),
+    
+    HelpContent(
+        id='basic.depth_only_immediate',
+        command='{prog} . -f1',
+        description='Fix immediate children only',
+        category='basic',
+        contexts={'standard', 'full'},
+        priority=25
+    ),
+    
+    HelpContent(
+        id='basic.depth_both',
+        command='{prog} . --depth 0 --depth 1',
+        description='Fix root and immediate children',
+        category='basic',
+        contexts={'standard', 'full'},
+        priority=30
+    ),
+    
+    HelpContent(
+        id='basic.depth_to',
+        command='{prog} . --depth-to 3',
+        description='Fix from root down to depth 3',
+        category='basic',
+        contexts={'minimal', 'full'},
+        priority=35
+    ),
+    
+    HelpContent(
+        id='basic.depth_range',
+        command='{prog} . --depth-from 2 --depth-to 5',
+        description='Fix only depths 2 through 5',
+        category='basic',
+        contexts={'full'},
+        priority=40
+    ),
+]
+
+# Create the section and add all items
+basic_section = HelpSection('basic', 'Basic Examples')
+for item in BASIC_CONTENT:
+    basic_section.add_item(item)
+
+# Export items for external access
+BASIC_ITEMS = {item.id: item for item in BASIC_CONTENT}
+
 
 def get_title() -> str:
     """Get section title."""

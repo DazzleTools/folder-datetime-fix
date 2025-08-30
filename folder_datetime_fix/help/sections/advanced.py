@@ -2,6 +2,102 @@
 Advanced usage help section with context-aware content.
 """
 
+from ...help_system import HelpContent, HelpSection
+
+# Define all advanced help content items for this section
+ADVANCED_CONTENT = [
+    HelpContent(
+        id='advanced.exclude',
+        command='{prog} . -fa --exclude="*.bak"',
+        description='Skip backup files',
+        category='advanced',
+        contexts={'standard', 'full'},
+        priority=10
+    ),
+    
+    HelpContent(
+        id='advanced.include_hidden',
+        command='{prog} . --include=".git/"',
+        description='Include normally-excluded folders',
+        category='advanced',
+        contexts={'standard', 'full'},
+        priority=15
+    ),
+    
+    HelpContent(
+        id='advanced.debug_depth',
+        command='{prog} {path} --depth 2 --dry-run -vvv',
+        description='Debug output at depth 2',
+        category='advanced',
+        contexts={'standard', 'full'},
+        priority=20,
+        variables={'path': 'C:\\Work'}
+    ),
+    
+    HelpContent(
+        id='advanced.include_generated',
+        command='{prog} . -fa --include-generated',
+        description='Include system files (rare)',
+        category='advanced',
+        contexts={'full'},
+        priority=25
+    ),
+    
+    HelpContent(
+        id='advanced.exclude_multiple',
+        command='{prog} . -fa --exclude="*.bak,*.tmp"',
+        description='Skip backup and temp files',
+        category='advanced',
+        contexts={'full'},
+        priority=30
+    ),
+    
+    HelpContent(
+        id='advanced.include_vscode',
+        command='{prog} . --include=".vscode,.vscode/**"',
+        description='Include VS Code configs',
+        category='advanced',
+        contexts={'full'},
+        priority=35
+    ),
+    
+    HelpContent(
+        id='advanced.max_depth',
+        command='{prog} {path} -fa --max-depth 3',
+        description='Limit recursion depth',
+        category='advanced',
+        contexts={'full'},
+        priority=40,
+        variables={'path': 'C:\\Big'}
+    ),
+    
+    HelpContent(
+        id='advanced.whitelist',
+        command='{prog} . --exclude-mode=none --include="*.py"',
+        description='Process only Python files',
+        category='advanced',
+        contexts={'full'},
+        priority=45
+    ),
+    
+    HelpContent(
+        id='advanced.analyze_folder',
+        command='{prog} . --analyze folder-only -fa',
+        description='Use folder-only analysis',
+        category='advanced',
+        contexts={'full'},
+        priority=50
+    ),
+]
+
+# Create the section and add all items
+advanced_section = HelpSection('advanced', 'Advanced Usage')
+for item in ADVANCED_CONTENT:
+    advanced_section.add_item(item)
+
+# Export items for external access
+ADVANCED_ITEMS = {item.id: item for item in ADVANCED_CONTENT}
+
 
 def get_title() -> str:
     """Get section title."""

@@ -194,41 +194,41 @@ class TestUNCPathInMainScript(unittest.TestCase):
         """Test parsing --unc-path argument."""
         # Test with --unc-path
         sys.argv = ['mod_fldr_dt.py', '--unc-path', '\\\\server\\share', '--dry-run']
-        args = self.mod_fldr_dt.parse_arguments()
+        parser, args = self.mod_fldr_dt.parse_arguments()
         self.assertEqual(args.unc_path, '\\\\server\\share')
         self.assertTrue(args.dry_run)
         
         # Test with regular path
         sys.argv = ['mod_fldr_dt.py', 'C:\\folder', '--dry-run']
-        args = self.mod_fldr_dt.parse_arguments()
+        parser, args = self.mod_fldr_dt.parse_arguments()
         self.assertEqual(args.path, 'C:\\folder')
         self.assertIsNone(args.unc_path)
     
     def test_unc_path_processing(self):
         """Test UNC path is properly processed."""
         sys.argv = ['mod_fldr_dt.py', '--unc-path', '\\server\\share\\folder', '--depth', '0', '--dry-run']
-        args = self.mod_fldr_dt.parse_arguments()
+        parser, args = self.mod_fldr_dt.parse_arguments()
         
         # The script should add backslashes
         self.assertEqual(args.unc_path, '\\server\\share\\folder')
         
         # Test that it strips leading backslashes correctly
         sys.argv = ['mod_fldr_dt.py', '--unc-path', '\\\\\\\\server\\share', '--depth', '0', '--dry-run']
-        args = self.mod_fldr_dt.parse_arguments()
+        parser, args = self.mod_fldr_dt.parse_arguments()
         self.assertEqual(args.unc_path, '\\\\\\\\server\\share')
     
     def test_both_path_arguments(self):
         """Test behavior when both path and --unc-path are provided."""
         # When both are provided, --unc-path should take precedence
         sys.argv = ['mod_fldr_dt.py', 'C:\\local', '--unc-path', '\\\\server\\share', '--dry-run']
-        args = self.mod_fldr_dt.parse_arguments()
+        parser, args = self.mod_fldr_dt.parse_arguments()
         self.assertEqual(args.path, 'C:\\local')
         self.assertEqual(args.unc_path, '\\\\server\\share')
     
     def test_no_path_provided(self):
         """Test behavior when no path is provided."""
         sys.argv = ['mod_fldr_dt.py', '--dry-run']
-        args = self.mod_fldr_dt.parse_arguments()
+        parser, args = self.mod_fldr_dt.parse_arguments()
         self.assertIsNone(args.path)
         self.assertIsNone(args.unc_path)
 
