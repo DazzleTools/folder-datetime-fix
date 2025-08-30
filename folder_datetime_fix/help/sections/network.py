@@ -1,5 +1,5 @@
 """
-Network share examples help section.
+Network share examples help section with context-aware content.
 """
 
 
@@ -8,8 +8,13 @@ def get_title() -> str:
     return "Network Share Examples"
 
 
+def get_minimal(prog: str = 'fdtfix.py') -> str:
+    """Get ultra-minimal version - not shown in minimal help."""
+    return ""  # Don't show network examples in minimal help
+
+
 def get_short(prog: str = 'fdtfix.py') -> str:
-    """Get condensed version for standard help."""
+    """Get condensed version for standard --help."""
     return f"""Network Share Examples:
   {prog} //server/share -f2 --dry-run                  # Preview 2 level changes
   {prog} --unc-path "\\\\server\\folder" -fa -vv          # UNC with progress info"""

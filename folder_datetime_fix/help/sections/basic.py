@@ -1,5 +1,5 @@
 """
-Basic examples help section.
+Basic examples help section with context-aware content.
 """
 
 
@@ -8,20 +8,27 @@ def get_title() -> str:
     return "Basic Examples"
 
 
+def get_minimal(prog: str = 'fdtfix.py') -> str:
+    """Get ultra-minimal version for no-args help (2-3 examples max)."""
+    return f"""  {prog} . -f2                # Fix current + immediate children
+  {prog} . -fa --dry-run      # Preview all changes (safe)
+  {prog} C:\\Projects -fa      # Fix entire tree recursively"""
+
+
 def get_short(prog: str = 'fdtfix.py') -> str:
-    """Get condensed version for standard help."""
+    """Get condensed version for standard --help."""
     return f"""Basic Examples:
   {prog} C:\\Projects --depth 0                         # Fix only Projects folder
   {prog} C:\\Projects -f2                               # Fix folder + immediate children
   {prog} C:\\Projects -fa                               # Fix entire tree recursively
-  {prog} C:\\Projects --depth-to 3                      # Process depths 0-3"""
+  {prog} C:\\Code --depth-to 3                          # Process depths 0-3"""
 
 
 def get_full(prog: str = 'fdtfix.py') -> str:
-    """Get complete version with all examples."""
+    """Get complete version with all examples (for --help examples or similar)."""
     return f"""Basic Examples:
   {prog} C:\\Projects --depth 0                         # Fix only Projects folder
-  {prog} C:\\Projects --depth 1                         # Fix only immediate subfolders
+  {prog} C:\\Projects --depth 1                         # Fix only immediate subfolders (short: -f1)
   {prog} C:\\Projects --depth 0 --depth 1               # Fix Projects AND immediate subfolders
   {prog} C:\\Projects -f2                               # Shortcut for above (folder + children)
   {prog} C:\\Projects -fa                               # Fix entire tree recursively

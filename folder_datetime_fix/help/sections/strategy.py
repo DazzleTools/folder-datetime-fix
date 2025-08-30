@@ -1,5 +1,5 @@
 """
-Strategy examples help section.
+Strategy examples help section with context-aware content.
 """
 
 
@@ -8,8 +8,13 @@ def get_title() -> str:
     return "Strategy Examples"
 
 
+def get_minimal(prog: str = 'fdtfix.py') -> str:
+    """Get ultra-minimal version - not shown in minimal help."""
+    return ""  # Don't show strategies in minimal help
+
+
 def get_short(prog: str = 'fdtfix.py') -> str:
-    """Get condensed version for standard help."""
+    """Get condensed version for standard --help."""
     return f"""Strategy Examples (shallow/deep/smart):
   {prog} C:\\Photos --strategy shallow                  # Quick scan, immediate files only
   {prog} C:\\Projects --strategy deep                   # Full recursive scan for accuracy

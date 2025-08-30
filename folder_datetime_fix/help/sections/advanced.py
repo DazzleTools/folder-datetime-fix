@@ -1,5 +1,5 @@
 """
-Advanced usage help section.
+Advanced usage help section with context-aware content.
 """
 
 
@@ -8,8 +8,13 @@ def get_title() -> str:
     return "Advanced Usage"
 
 
+def get_minimal(prog: str = 'fdtfix.py') -> str:
+    """Get ultra-minimal version - not shown in minimal help."""
+    return ""  # Don't show advanced usage in minimal help
+
+
 def get_short(prog: str = 'fdtfix.py') -> str:
-    """Get condensed version for standard help."""
+    """Get condensed version for standard --help."""
     return f"""Advanced Usage:
   {prog} . -fa --exclude="*.bak"                       # Skip backup files
   {prog} . --include=".git/"                           # Include normally-excluded folders

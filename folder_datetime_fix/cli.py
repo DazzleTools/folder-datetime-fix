@@ -27,39 +27,63 @@ MAX_DEPTH_INFINITE = 100  # Reasonable maximum for "infinite" depth
 
 def get_minimal_epilog():
     """Get minimal examples for when no path is provided."""
-    return """Quick Examples:
-  %(prog)s .                    # Fix current directory
-  %(prog)s . -f2                # Fix current + immediate children  
-  %(prog)s . -fa --dry-run      # Preview all changes (safe)
+    # Import here to avoid circular imports
+    from .help.sections import basic, tips
+    
+    # Just show the most essential examples
+    examples = basic.get_minimal('%(prog)s')
+    
+    # Get a random tip - we're only showing basic examples in minimal mode
+    tip = tips.get_random_tip(exclude_sections=['strategy', 'advanced', 'network', 'quick_start'])
+    tip_line = f"\n{tip}" if tip else ""
+    
+    return f"""Quick Examples:
+{examples}
 
 For more examples: %(prog)s --help
-For specific topics: %(prog)s --help <topic>
-Topics: strategy, analyze, patterns, layers"""
+For specific topics: %(prog)s --help <topic>{tip_line}"""
 
 
 def get_standard_epilog():
-    """Get standard examples for --help."""
-    return """Basic Examples:
-  %(prog)s C:\\Projects --depth 0                         # Fix only Projects folder
-  %(prog)s C:\\Projects -f2                               # Fix folder + immediate children
-  %(prog)s C:\\Projects -fa                               # Fix entire tree recursively
-
-Strategy Examples:
-  %(prog)s C:\\Photos --strategy shallow                  # Quick scan, immediate files only
-  %(prog)s C:\\Projects --strategy deep                   # Full recursive scan for accuracy
-  %(prog)s C:\\Work --strategy smart                      # Auto-choose based on structure
-
-Advanced Usage:
-  %(prog)s . -fa --exclude="*.bak"                       # Skip backup files
-  %(prog)s . --include=".git/"                           # Include normally-excluded folders
-
-For detailed help on specific topics:
+    """Get standard examples for --help - shows all sections."""
+    # Import sections here to avoid circular imports
+    from .help.sections import quick_start, basic, strategy, advanced, network, tips
+    
+    sections = []
+    
+    # Quick Start for Network Shares
+    qs = quick_start.get_short('%(prog)s')
+    if qs:
+        sections.append(qs)
+    
+    # Basic Examples
+    sections.append(basic.get_short('%(prog)s'))
+    
+    # Strategy Examples
+    sections.append(strategy.get_short('%(prog)s'))
+    
+    # Advanced Usage
+    sections.append(advanced.get_short('%(prog)s'))
+    
+    # Network Share Examples
+    sections.append(network.get_short('%(prog)s'))
+    
+    # Footer with help topics
+    sections.append("""For detailed help on specific topics:
   %(prog)s --help strategy                               # How scan strategies work
   %(prog)s --help analyze                                # How analysis strategies work
   %(prog)s --help patterns                               # Exclude/include patterns guide
   %(prog)s --help layers                                 # How options layer together
 
-See also: docs/Recipes-and-Examples.md"""
+See also: docs/Recipes-and-Examples.md""")
+    
+    # Add a random tip - we're showing all sections, so exclude none from tip selection
+    # This ensures the tip doesn't duplicate what we're already showing
+    tip = tips.get_random_tip(exclude_sections=['basic', 'strategy', 'advanced', 'network', 'quick_start'])
+    if tip:
+        sections.append(tip)
+    
+    return '\n\n'.join(sections)
 
 
 def create_parser(show_full_help=False):
