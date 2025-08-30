@@ -25,81 +25,51 @@ from .tree_visualizer import TreeVisualizer
 MAX_DEPTH_INFINITE = 100  # Reasonable maximum for "infinite" depth
 
 
-def get_howto_examples(prog='fdtfix.py'):
-    """Get the howto examples text for help messages."""
-    return """Quick Start for Network Shares:
-  {prog1:<55} # Preview all fixes (system files auto-skipped)
-  
-Basic Examples:
-  {prog2:<55} # Fix only Projects folder
-  {prog3:<55} # Fix only immediate subfolders (short: -f1)
-  {prog4:<55} # Fix Projects AND immediate subfolders
-  {prog5:<55} # Shortcut for above (folder + children)
-  {prog6:<55} # Fix entire tree recursively
-  {prog15:<55} # Process depths 0-3 (simpler than 4x --depth)
-  {prog16:<55} # Process depths 1-4 only
+def get_minimal_epilog():
+    """Get minimal examples for when no path is provided."""
+    return """Quick Examples:
+  %(prog)s .                    # Fix current directory
+  %(prog)s . -f2                # Fix current + immediate children  
+  %(prog)s . -fa --dry-run      # Preview all changes (safe)
 
-Strategy Examples (shallow/deep/smart):
-  {prog7:<55} # Quick scan, immediate files only
-  {prog8:<55} # Full recursive scan for accuracy
-  {prog9:<55} # Auto-choose based on structure
+For more examples: %(prog)s --help
+For specific topics: %(prog)s --help <topic>
+Topics: strategy, analyze, patterns, layers"""
+
+
+def get_standard_epilog():
+    """Get standard examples for --help."""
+    return """Basic Examples:
+  %(prog)s C:\\Projects --depth 0                         # Fix only Projects folder
+  %(prog)s C:\\Projects -f2                               # Fix folder + immediate children
+  %(prog)s C:\\Projects -fa                               # Fix entire tree recursively
+
+Strategy Examples:
+  %(prog)s C:\\Photos --strategy shallow                  # Quick scan, immediate files only
+  %(prog)s C:\\Projects --strategy deep                   # Full recursive scan for accuracy
+  %(prog)s C:\\Work --strategy smart                      # Auto-choose based on structure
 
 Advanced Usage:
-  {prog10:<55} # Include system files (rare)
-  {prog11:<55} # Debug output at depth 2
-  {prog12:<55} # Limit recursion depth
+  %(prog)s . -fa --exclude="*.bak"                       # Skip backup files
+  %(prog)s . --include=".git/"                           # Include normally-excluded folders
 
-Network Share Examples:
-  {prog13:<55} # Preview 2 level changes first
-  {prog14:<55} # UNC w/ progress info for all changes
+For detailed help on specific topics:
+  %(prog)s --help strategy                               # How scan strategies work
+  %(prog)s --help analyze                                # How analysis strategies work
+  %(prog)s --help patterns                               # Exclude/include patterns guide
+  %(prog)s --help layers                                 # How options layer together
 
-For detailed strategy explanations and performance tips:
-  {prog17:<55} # How scan strategies work
-  {prog18:<55} # How analysis strategies work
-  See also: docs/Recipes-and-Examples.md and docs/Performance-Optimization.md""".format(
-        prog1=f'{prog} --unc-path "\\\\server\\folder" -fa --dry-run -vv',
-        prog2=f"{prog} C:\\Projects --depth 0",
-        prog3=f"{prog} C:\\Projects --depth 1",
-        prog4=f"{prog} C:\\Projects --depth 0 --depth 1",
-        prog5=f"{prog} C:\\Projects -f2",
-        prog6=f"{prog} C:\\Projects -fa",
-        prog7=f"{prog} C:\\Photos --strategy shallow",
-        prog8=f"{prog} C:\\Projects --strategy deep",
-        prog9=f"{prog} C:\\Work --strategy smart",
-        prog10=f"{prog} . -fa --include-generated",
-        prog11=f"{prog} C:\\Work --depth 2 --dry-run -vvv",
-        prog12=f"{prog} C:\\Big -fa --max-depth 3",
-        prog13=f"{prog} //server/share -f2 --dry-run",
-        prog14=f'{prog} --unc-path "\\\\server\\folder" -fa -vv',
-        prog15=f"{prog} C:\\Code --depth-to 3",
-        prog16=f"{prog} C:\\Projects --depth-from 1 --depth-to 4",
-        prog17=f"{prog} --help strategy",
-        prog18=f"{prog} --help analyze"
-    )
+See also: docs/Recipes-and-Examples.md"""
 
 
-def print_simple_help():
-    """Print simplified help when no arguments provided."""
-    prog = 'fdtfix.py'
-    print(f"""usage: {prog} [-h] [--version] [--unc-path UNC_PATH] [--depth DEPTHS] [--depth-to N] [--depth-from N] [--strategy {{shallow,deep,smart}}]
-                 [--fix-2] [--fix-all] [--fix-immediate] [--exclude-mode {{default,none,files,folders}}] [--exclude PATTERNS]
-                 [--include PATTERNS] [--include-generated] [--analyze ANALYZE] [--visualize] [--dry-run] [--verbose] [--quiet]
-                 [--report FILE] [--max-depth N]
-                 [path]
-
-Fix folder modified timestamps to match their content (system files skipped by default)
-
-{get_howto_examples(prog)}
-""")
-
-
-@trace
-def parse_arguments(argv=None):
-    """Parse command-line arguments."""
+def create_parser(show_full_help=False):
+    """Create the argument parser with appropriate epilog and all arguments."""
+    epilog = get_standard_epilog() if show_full_help else get_minimal_epilog()
+    
     parser = argparse.ArgumentParser(
         description='Fix folder modified timestamps to match their content (system files skipped by default)',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=get_howto_examples('%(prog)s')
+        epilog=epilog
     )
     
     # Version information
@@ -181,14 +151,15 @@ def parse_arguments(argv=None):
     # Analysis mode
     parser.add_argument('--analyze',
                        default='auto',
-                       help='Analysis strategy: tree (full memory), folder-only (minimal), low-memory (streaming), auto (adaptive), or comma-separated options like tree,ctime (default: auto)')
+                       help='Analysis strategy: tree (full memory), folder-only (minimal), '
+                            'low-memory (streaming), auto (adaptive), or comma-separated options '
+                            'like tree,ctime (default: auto)')
     
-    # Debug visualization
+    # Output control
     parser.add_argument('--visualize',
                        action='store_true',
                        help='Show visual tree structure of what will be processed (debug mode)')
     
-    # Execution modes
     parser.add_argument('--dry-run', '-n',
                        action='store_true',
                        help='Preview changes without applying them')
@@ -202,18 +173,32 @@ def parse_arguments(argv=None):
                        action='store_true',
                        help='Suppress all output except errors')
     
-    # Reporting
     parser.add_argument('--report', '-r',
-                       type=str,
                        metavar='FILE',
                        help='Save detailed report to file')
     
-    # Advanced options
+    # Performance limits
     parser.add_argument('--max-depth', '-m',
                        type=int,
+                       default=MAX_DEPTH_INFINITE,
                        metavar='N',
-                       help='Maximum depth for --fix-all or --depth infinite (default: 100)')
+                       help=f'Maximum depth for --fix-all or --depth infinite (default: {MAX_DEPTH_INFINITE})')
     
+    return parser
+
+
+@trace
+def parse_arguments(argv=None):
+    """Parse command-line arguments."""
+    # Determine if user is asking for full help
+    # Check both argv and sys.argv to catch all cases
+    import sys
+    show_full_help = (argv and '--help' in argv) or (not argv and '--help' in sys.argv)
+    
+    # Create parser with appropriate epilog and all arguments
+    parser = create_parser(show_full_help)
+    
+    # Parse the arguments
     args = parser.parse_args(argv)
     
     # Process depth arguments - handle "infinite" special case
@@ -250,28 +235,27 @@ def parse_arguments(argv=None):
     # Process convenience aliases
     if args.fix_2:
         if not args.depths:
-            args.depths = []
-        args.depths.extend([0, 1])
+            args.depths = [0, 1]
+        else:
+            args.depths.extend([0, 1])
         args.strategy = 'deep'
-    
-    elif args.fix_all:
-        # Process entire tree recursively
+        
+    if args.fix_all:
+        # Generate depths up to max_depth
         max_d = args.max_depth if args.max_depth else MAX_DEPTH_INFINITE
+        args.depths = list(range(0, max_d + 1))
+        args.strategy = 'deep'
+        
+    if args.fix_immediate:
         if not args.depths:
-            args.depths = []
-        args.depths.extend(range(0, max_d + 1))
-        if args.strategy == 'shallow':  # Override default for tree mode
-            args.strategy = 'deep'
-    
-    elif args.fix_immediate:
-        if not args.depths:
-            args.depths = []
-        args.depths.append(1)
+            args.depths = [1]
+        else:
+            args.depths.append(1)
         args.strategy = 'shallow'
     
-    # Default to depth 0 if no depth specified
+    # Set default depths if none specified
     if not args.depths:
-        args.depths = [0]
+        args.depths = [0]  # Default to current folder only
     
     # Remove duplicates and sort
     args.depths = sorted(set(args.depths))
@@ -280,7 +264,7 @@ def parse_arguments(argv=None):
     if args.quiet and args.verbose > 0:
         parser.error("--quiet and --verbose are mutually exclusive")
     
-    return args
+    return parser, args
 
 
 @trace
@@ -330,7 +314,7 @@ def main():
             print_analyze_help()
             return 0
     
-    args = parse_arguments()
+    parser, args = parse_arguments()
     
     # Set global verbosity for tracing
     set_verbosity(args.verbose if not args.quiet else 0)
@@ -342,8 +326,8 @@ def main():
     elif args.path:
         path_to_use = args.path
     else:
-        # No path provided - show simplified help
-        print_simple_help()
+        # No path provided - show help using the parser we already created
+        parser.print_help()
         return 1
     
     # Initialize UNC handler for network path support
@@ -381,9 +365,7 @@ def main():
         print(f"Target:        {target_path}")
         if path_info['is_unc']:
             print(f"Type:          UNC Network Path")
-        elif path_info['is_network']:
-            print(f"Type:          Network Drive")
-        elif path_info['is_subst']:
+        elif path_info['is_substituted']:
             print(f"Type:          Substituted Drive")
         print(f"Depths:        {args.depths}")
         print(f"Strategy:      {args.strategy}")
@@ -413,44 +395,48 @@ def main():
     
     # Handle visualization mode
     if args.visualize:
-        # Detect if we can use Unicode
-        try:
-            # Try to encode a test emoji
-            test_char = "📁"
-            test_char.encode(sys.stdout.encoding or 'utf-8')
-            use_unicode = True
-        except (UnicodeEncodeError, LookupError):
-            use_unicode = False
-            if sys.platform == 'win32':
-                print("Note: Using ASCII characters. For better visuals, run: chcp 65001")
-                print()
+        if not args.quiet:
+            print("Generating folder structure visualization...")
+            print()
         
+        # Create visualizer
         visualizer = TreeVisualizer(
-            use_unicode=use_unicode,
-            show_timestamps=True,
-            show_sizes=True,
-            show_depth=True
+            max_depth=max(args.depths) if args.depths else 10,
+            skip_system_files=skip_system_files,
+            verbose=args.verbose
         )
         
-        print("\nVISUALIZATION MODE")
-        print("=" * 50)
-        print("Showing tree structure that will be processed:")
-        print()
+        # Generate and display tree
+        tree = visualizer.build_tree(target_path)
+        if tree:
+            output = visualizer.format_tree(tree)
+            print(output)
+            
+            # Show statistics
+            stats = visualizer.get_statistics(tree)
+            print("\n" + "=" * 50)
+            print("VISUALIZATION STATISTICS")
+            print("=" * 50)
+            print(f"Total folders:     {stats['total_folders']}")
+            print(f"Total files:       {stats['total_files']}")
+            print(f"Max depth:         {stats['max_depth']}")
+            print(f"Depths to process: {args.depths}")
+            
+            # Count nodes at each depth
+            depth_counts = {}
+            for depth in args.depths:
+                count = visualizer.count_folders_at_depth(tree, depth)
+                if count > 0:
+                    depth_counts[depth] = count
+            
+            if depth_counts:
+                print("\nFolders at each depth:")
+                for depth, count in sorted(depth_counts.items()):
+                    print(f"  Depth {depth}: {count} folders")
+            
+            print("=" * 50)
         
-        # Determine max depth for visualization
-        max_viz_depth = max(args.depths) if args.depths else 3
-        
-        # Visualize the tree
-        tree_output = visualizer.visualize_path(
-            target_path,
-            max_depth=max_viz_depth + 1,  # Show one level deeper for context
-            skip_hidden=False,
-            skip_system=skip_system_files,
-            use_ascii=not use_unicode
-        )
-        print(tree_output)
-        
-        print("\nNote: This is a preview. Run without --visualize to actually process folders.")
+        # Exit after visualization
         return 0
     
     # Initialize components
@@ -459,101 +445,155 @@ def main():
     fixer = TimestampFixer(dry_run=args.dry_run, verbose=verbosity)
     
     # Create analysis strategy based on --analyze parameter
-    strategy = StrategyFactory.create_strategy(args.analyze, scanner, args.strategy)
+    analysis_strategy = StrategyFactory.create_strategy(
+        args.analyze,
+        verbose=verbosity
+    )
     
-    if not args.quiet and verbosity >= 1:
-        print(f"Analysis:      {strategy.get_name()}")
-    
-    # Perform scanning
-    if not args.quiet:
-        print("Scanning folders...")
-    
-    scan_results = strategy.analyze(target_path, args.depths)
-    
-    if not args.quiet:
-        print(f"Found {len(scan_results)} folders to process\n")
-    
-    # Show tree visualization at high verbosity
-    if verbosity >= 3 and not args.quiet:
-        print("Tree Structure Analyzed:")
-        print("-" * 50)
-        
-        # Use TreeVisualizer to show the results
-        try:
-            test_char = "📁"
-            test_char.encode(sys.stdout.encoding or 'utf-8')
-            use_unicode = True
-        except (UnicodeEncodeError, LookupError):
-            use_unicode = False
-        
-        visualizer = TreeVisualizer(
-            use_unicode=use_unicode,
-            show_timestamps=True,
-            show_sizes=False,
-            show_depth=True
-        )
-        
-        # Create a simplified visualization from results
-        if hasattr(strategy, 'root') and strategy.root:
-            # TreeStrategy has a tree structure we can visualize
-            print("TreeStrategy Node Structure:")
-            # We'll show the tree structure that was built
-            # This is a bit complex, so for now just show stats
-            node_count = _count_tree_nodes(strategy.root)
-            print(f"  Total nodes in memory: {node_count}")
-            print(f"  Nodes at requested depths: {len(scan_results)}")
-        else:
-            # Show first few results
-            print("Folders to be processed:")
-            for i, (path, timestamp) in enumerate(scan_results[:10]):
-                try:
-                    rel_path = path.relative_to(target_path)
-                    depth = len(rel_path.parts)
-                except:
-                    rel_path = path.name
-                    depth = 0
-                    
-                indent = "  " * depth
-                ts_str = timestamp.strftime('%Y-%m-%d %H:%M:%S') if timestamp else "No timestamp"
-                print(f"{indent}[DIR] {rel_path} [{ts_str}]")
-                
-            if len(scan_results) > 10:
-                print(f"  ... and {len(scan_results) - 10} more folders")
-        
-        print("-" * 50)
+    # If verbose, show analysis strategy info
+    if verbosity >= 1 and not args.quiet:
+        strategy_info = analysis_strategy.get_info()
+        print(f"Analysis:      {strategy_info['name']}")
+        if strategy_info.get('description'):
+            print(f"               {strategy_info['description']}")
         print()
     
-    # Apply fixes
-    if not args.quiet:
-        action = "Previewing changes..." if args.dry_run else "Applying changes..."
-        print(action)
+    # Track overall statistics
+    total_stats = {
+        'total_folders': 0,
+        'folders_changed': 0,
+        'folders_skipped': 0,
+        'empty_folders': 0,
+        'folders_error': 0
+    }
     
-    stats = fixer.process_scan_results(scan_results)
-    
-    # Print summary
-    if not args.quiet:
-        print_summary(stats, args.verbose > 0)
-    
-    # Save report if requested
+    # Report file setup
+    report_file = None
     if args.report:
-        report_path = Path(args.report)
-        fixer.save_report(report_path)
+        try:
+            report_file = open(args.report, 'w', encoding='utf-8')
+            report_file.write(f"Folder DateTime Fix Report\n")
+            report_file.write(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            report_file.write(f"Target: {target_path}\n")
+            report_file.write(f"Depths: {args.depths}\n")
+            report_file.write(f"Strategy: {args.strategy}\n")
+            report_file.write(f"Mode: {'DRY RUN' if args.dry_run else 'EXECUTE'}\n")
+            report_file.write("\n")
+            report_file.write("Path,Original Time,New Time,Status\n")
+        except Exception as e:
+            print(f"Warning: Could not create report file: {e}", file=sys.stderr)
+            report_file = None
+    
+    try:
+        # Scan folders at specified depths
         if not args.quiet:
-            print(f"\nReport saved to: {report_path}")
-    
-    # Print errors if any occurred
-    if fixer.errors and not args.quiet:
-        print("\n⚠️ Some folders could not be processed. Check permissions.")
-        if args.verbose > 0:
-            print("\nDetailed errors:")
-            for error in fixer.errors:
-                print(f"  - {error['path']}: {error['error']}")
-    
-    # Return appropriate exit code
-    if stats['folders_error'] > 0:
-        return 1  # Some errors occurred
-    
-    return 0  # Success
+            print("Scanning folders...")
+        
+        folders_to_process = scanner.scan_at_depths(target_path, args.depths, args.strategy)
+        
+        if not args.quiet:
+            print(f"Found {len(folders_to_process)} folders to process\n")
+        
+        # Analyze folders using the selected strategy
+        if not args.quiet:
+            if args.dry_run:
+                print("Previewing changes...")
+            else:
+                print("Applying changes...")
+            print()
+        
+        # Process folders with analysis strategy
+        analysis_results = analysis_strategy.analyze(folders_to_process, scanner, args.strategy)
+        
+        # Apply fixes based on analysis results
+        for folder_path, timestamps in analysis_results.items():
+            if folder_path in folders_to_process:
+                original_time = folders_to_process[folder_path]
+                
+                # Determine if change is needed
+                if timestamps and timestamps.get('newest'):
+                    new_time = timestamps['newest']
+                    
+                    # Check if times differ
+                    if original_time != new_time:
+                        # Apply the fix
+                        success = fixer.fix_folder_timestamp(folder_path, new_time)
+                        
+                        if success:
+                            total_stats['folders_changed'] += 1
+                            status = "CHANGED"
+                        else:
+                            total_stats['folders_error'] += 1
+                            status = "ERROR"
+                        
+                        # Show verbose output
+                        if verbosity >= 1 and not args.quiet:
+                            print(f"{'[DRY RUN] ' if args.dry_run else ''}{folder_path}")
+                            print(f"  Original: {format_timestamp(original_time)}")
+                            print(f"  New:      {format_timestamp(new_time)}")
+                            print(f"  Status:   {status}")
+                            print()
+                    else:
+                        total_stats['folders_skipped'] += 1
+                        status = "SKIPPED"
+                        
+                        if verbosity >= 2 and not args.quiet:
+                            print(f"{folder_path}")
+                            print(f"  Status:   {status} (already correct)")
+                            print()
+                else:
+                    # Empty folder or no valid timestamps
+                    total_stats['empty_folders'] += 1
+                    status = "EMPTY"
+                    
+                    if verbosity >= 2 and not args.quiet:
+                        print(f"{folder_path}")
+                        print(f"  Status:   {status} (no files)")
+                        print()
+                
+                # Write to report file
+                if report_file:
+                    orig_str = format_timestamp(original_time) if original_time else "N/A"
+                    new_str = format_timestamp(timestamps.get('newest')) if timestamps and timestamps.get('newest') else "N/A"
+                    report_file.write(f'"{folder_path}","{orig_str}","{new_str}","{status}"\n')
+                
+                total_stats['total_folders'] += 1
+        
+        # Add strategy-specific statistics
+        strategy_stats = analysis_strategy.get_statistics()
+        if strategy_stats:
+            total_stats.update(strategy_stats)
+        
+        # Print summary
+        if not args.quiet:
+            print_summary(total_stats, verbose=verbosity >= 1)
+        
+        # Close report file
+        if report_file:
+            report_file.write(f"\nSummary:\n")
+            report_file.write(f"Total folders: {total_stats['total_folders']}\n")
+            report_file.write(f"Changed: {total_stats['folders_changed']}\n")
+            report_file.write(f"Skipped: {total_stats['folders_skipped']}\n")
+            report_file.write(f"Empty: {total_stats['empty_folders']}\n")
+            if total_stats['folders_error'] > 0:
+                report_file.write(f"Errors: {total_stats['folders_error']}\n")
+            report_file.close()
+            
+            if not args.quiet:
+                print(f"\nReport saved to: {args.report}")
+        
+        # Return exit code based on errors
+        return 1 if total_stats['folders_error'] > 0 else 0
+        
+    except KeyboardInterrupt:
+        print("\n\nOperation cancelled by user.", file=sys.stderr)
+        return 130  # Standard exit code for SIGINT
+    except Exception as e:
+        print(f"\nERROR: {e}", file=sys.stderr)
+        if verbosity >= 3:
+            import traceback
+            traceback.print_exc()
+        return 1
 
 
 if __name__ == '__main__':
