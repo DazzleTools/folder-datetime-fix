@@ -1,7 +1,10 @@
 # Core dependencies
 # No external dependencies required for basic functionality
 
-# Optional dependencies
+# Local development dependencies
+unctools>=0.1.0  # For enhanced UNC path support - required for local development
+
+# Optional dependencies for end users
 # unctools>=0.1.0  # For enhanced UNC path support (install with pip install .[unc])
 
 # Development dependencies (install with pip install .[dev])

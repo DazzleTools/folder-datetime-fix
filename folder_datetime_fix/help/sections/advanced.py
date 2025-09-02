@@ -2,7 +2,7 @@
 Advanced usage help section with context-aware content.
 """
 
-from ...help_system import HelpContent, HelpSection
+from ...help_lib import HelpContent, HelpSection
 
 # Define all advanced help content items for this section
 ADVANCED_CONTENT = [

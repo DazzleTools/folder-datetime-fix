@@ -8,7 +8,7 @@ from pathlib import Path
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from folder_datetime_fix.help_system import HelpContent, HelpSection, HelpBuilder
+from folder_datetime_fix.help_lib import HelpContent, HelpSection, HelpBuilder
 from folder_datetime_fix.help.sections.basic import basic_section
 
 

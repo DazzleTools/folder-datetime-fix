@@ -2,7 +2,7 @@
 Network share examples help section with context-aware content.
 """
 
-from ...help_system import HelpContent, HelpSection
+from ...help_lib import HelpContent, HelpSection
 
 # Define all network help content items for this section
 NETWORK_CONTENT = [

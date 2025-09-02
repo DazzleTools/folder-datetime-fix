@@ -2,7 +2,7 @@
 Strategy examples help section with context-aware content.
 """
 
-from ...help_system import HelpContent, HelpSection
+from ...help_lib import HelpContent, HelpSection
 
 # Define all strategy help content items for this section
 STRATEGY_CONTENT = [

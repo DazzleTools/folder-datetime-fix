@@ -2,7 +2,7 @@
 Basic examples help section with context-aware content.
 """
 
-from ...help_system import HelpContent, HelpSection
+from ...help_lib import HelpContent, HelpSection
 
 # Define all basic help content items for this section
 BASIC_CONTENT = [

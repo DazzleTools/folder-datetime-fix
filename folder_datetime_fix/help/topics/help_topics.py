@@ -23,90 +23,28 @@ def print_with_padding(text: str, padding: str = " "):
 
 def print_strategy_help():
     """Print detailed help about timestamp calculation strategies."""
-    help_text = """TIMESTAMP CALCULATION STRATEGIES
-=================================
-
-The folder datetime fix tool supports three strategies for calculating
-folder timestamps based on their contents:
-
-1. SHALLOW (Fast but less accurate)
-   - Only examines immediate children (files in the folder)
-   - Ignores subdirectory contents
-   - Fastest option for large directory trees
-   - Best for: Quick scans, folders with few subfolders
-
-2. DEEP (Slow but accurate)
-   - Recursively examines ALL contents
-   - Considers every file in every subfolder
-   - Most accurate timestamp calculation
-   - Best for: Final corrections, archival purposes
-
-3. SMART (Adaptive - Default)
-   - Automatically chooses between shallow and deep
-   - Uses heuristics based on folder structure
-   - Balances speed and accuracy
-   - Best for: General use, mixed directory structures
-
-EXAMPLES:
-  fdtfix.py C:\\Photos --strategy shallow     # Quick photo folder scan
-  fdtfix.py C:\\Projects --strategy deep      # Accurate project tree fix
-  fdtfix.py C:\\Documents --strategy smart    # Let tool decide (default)
-
-INTERACTION WITH OTHER OPTIONS:
-- The strategy applies at EACH depth level independently
-- Works with --depth, --depth-to, and --depth-from options
-- Can be overridden per-depth with --analyze options
-
-See also: --help analyze, --help layers"""
+    from .detailed_content import get_detailed_content
     
-    print_with_padding(help_text)
+    content = get_detailed_content('strategy')
+    if content:
+        formatted_text = content.get_formatted_content(level='detailed', padding=' ')
+        print(formatted_text)
+    else:
+        # Fallback if detailed content not found
+        print(" Strategy help content not available")
 
 
 def print_analyze_help():
     """Print detailed help about analysis strategies."""
-    help_text = """ANALYSIS STRATEGIES
-===================
-
-Analysis strategies control how the tool builds its internal representation
-of the directory tree and calculates timestamps:
-
-1. TREE (Full memory)
-   - Builds complete tree structure in memory
-   - Allows complex timestamp calculations
-   - Best for: Small to medium directory trees
-   - Memory usage: O(n) where n = total items
-
-2. FOLDER-ONLY (Minimal memory)
-   - Only tracks folder information
-   - Ignores individual file details
-   - Best for: Large trees, when file details don't matter
-   - Memory usage: O(d) where d = directories only
-
-3. LOW-MEMORY (Streaming)
-   - Processes one branch at a time
-   - Minimal memory footprint
-   - Best for: Extremely large trees
-   - Memory usage: O(depth)
-
-4. AUTO (Adaptive - Default)
-   - Automatically selects based on tree size
-   - Monitors memory usage during scan
-   - Switches strategies if needed
-   - Best for: General use
-
-ADVANCED OPTIONS:
-You can combine strategies with modifiers:
-  --analyze tree,ctime        # Use tree mode with creation times
-  --analyze folder-only,fast  # Folder-only with speed optimizations
-
-EXAMPLES:
-  fdtfix.py C:\\Huge -fa --analyze low-memory   # Process huge tree
-  fdtfix.py C:\\Small --analyze tree            # Full analysis for small tree
-  fdtfix.py C:\\Work --analyze auto             # Let tool decide (default)
-
-See also: --help strategy, --help layers"""
+    from .detailed_content import get_detailed_content
     
-    print_with_padding(help_text)
+    content = get_detailed_content('analyze')
+    if content:
+        formatted_text = content.get_formatted_content(level='detailed', padding=' ')
+        print(formatted_text)
+    else:
+        # Fallback if detailed content not found
+        print(" Analyze help content not available")
 
 
 def print_patterns_help():

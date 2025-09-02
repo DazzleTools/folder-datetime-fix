@@ -2,7 +2,7 @@
 Detailed help topics section.
 """
 
-from ...help_system import HelpContent, HelpSection
+from ...help_lib import HelpContent, HelpSection
 
 # Define all detailed help topic items
 DETAILED_HELP_CONTENT = [

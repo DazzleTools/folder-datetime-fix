@@ -81,6 +81,83 @@ class HelpContent:
         return f"TIP: {self.description}: {cmd}"
 
 
+@dataclass
+class DetailedHelpContent:
+    """
+    A help content item that supports multiple levels of detail.
+    
+    This class extends the basic HelpContent concept to support brief,
+    standard, and detailed descriptions, allowing users to choose the
+    level of information they need.
+    """
+    id: str                          # Unique identifier like "strategy.deep"
+    topic: str                       # Topic name like "strategy" or "analyze"
+    brief: str                       # One-line description
+    standard: str                    # Normal help text (paragraph)
+    detailed: str                    # Full technical documentation
+    examples: List[str] = field(default_factory=list)  # Code examples
+    validation_tests: List[str] = field(default_factory=list)  # Test cases
+    category: str = 'general'        # Category for grouping
+    priority: int = 50               # Lower = higher priority
+    
+    def get_content(self, level: str = 'standard') -> str:
+        """
+        Get content at the specified detail level.
+        
+        Args:
+            level: Detail level ('brief', 'standard', 'detailed')
+            
+        Returns:
+            Content at the requested level
+        """
+        if level == 'brief':
+            return self.brief
+        elif level == 'detailed':
+            return self.detailed
+        else:  # standard
+            return self.standard
+    
+    def get_formatted_content(self, level: str = 'standard', padding: str = " ") -> str:
+        """
+        Get formatted content with optional left padding.
+        
+        Args:
+            level: Detail level ('brief', 'standard', 'detailed')
+            padding: String to prepend to each line
+            
+        Returns:
+            Formatted content with padding
+        """
+        content = self.get_content(level)
+        
+        # Add examples if detailed level
+        if level == 'detailed' and self.examples:
+            content += "\n\nEXAMPLES:\n" + "\n".join(self.examples)
+        
+        # Apply padding
+        if padding:
+            lines = content.split('\n')
+            padded_lines = [padding + line if line.strip() else "" for line in lines]
+            return '\n'.join(padded_lines)
+        
+        return content
+    
+    def validate_claims(self) -> Dict[str, bool]:
+        """
+        Validate claims made in the help content.
+        
+        Returns:
+            Dict mapping validation test names to pass/fail status
+        """
+        # This would be implemented to actually test the claims
+        # For now, return a placeholder structure
+        results = {}
+        for test in self.validation_tests:
+            # Placeholder - in real implementation would run actual tests
+            results[test] = True
+        return results
+
+
 class HelpSection:
     """
     A collection of related help content items.

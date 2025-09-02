@@ -15,7 +15,7 @@ from datetime import datetime
 from .folder_scanner import FolderScanner
 from .timestamp_fixer import TimestampFixer
 from .unc_handler import get_unc_handler
-from .help_topics import handle_help_topic
+from .help.topics.help_topics import handle_help_topic
 from .version import __version__, get_base_version
 from .trace_utils import trace, set_verbosity
 from .analysis_strategies import StrategyFactory
@@ -109,7 +109,7 @@ def print_custom_minimal_help():
     
     # Import sections and help system
     from .help.sections import ALL_SECTIONS, get_items_for_context
-    from .help_system import HelpBuilder
+    from .help_lib import HelpBuilder
     
     # Create a help builder for minimal context
     builder = HelpBuilder(prog=prog)
@@ -458,7 +458,7 @@ def main():
         print(f"Target:        {target_path}")
         if path_info['is_unc']:
             print(f"Type:          UNC Network Path")
-        elif path_info['is_substituted']:
+        elif path_info.get('is_subst', False):
             print(f"Type:          Substituted Drive")
         print(f"Depths:        {args.depths}")
         print(f"Strategy:      {args.strategy}")
@@ -494,40 +494,32 @@ def main():
         
         # Create visualizer
         visualizer = TreeVisualizer(
-            max_depth=max(args.depths) if args.depths else 10,
-            skip_system_files=skip_system_files,
-            verbose=args.verbose
+            show_timestamps=True,
+            show_depth=True
         )
         
         # Generate and display tree
-        tree = visualizer.build_tree(target_path)
-        if tree:
-            output = visualizer.format_tree(tree)
-            print(output)
-            
-            # Show statistics
-            stats = visualizer.get_statistics(tree)
-            print("\n" + "=" * 50)
-            print("VISUALIZATION STATISTICS")
-            print("=" * 50)
-            print(f"Total folders:     {stats['total_folders']}")
-            print(f"Total files:       {stats['total_files']}")
-            print(f"Max depth:         {stats['max_depth']}")
-            print(f"Depths to process: {args.depths}")
-            
-            # Count nodes at each depth
-            depth_counts = {}
-            for depth in args.depths:
-                count = visualizer.count_folders_at_depth(tree, depth)
-                if count > 0:
-                    depth_counts[depth] = count
-            
-            if depth_counts:
-                print("\nFolders at each depth:")
-                for depth, count in sorted(depth_counts.items()):
+        max_depth = max(args.depths) if args.depths else 10
+        output = visualizer.visualize_path(target_path, max_depth=max_depth, use_ascii=True)
+        print(output)
+        
+        # Show statistics
+        print("\n" + "=" * 50)
+        print("VISUALIZATION STATISTICS")
+        print("=" * 50)
+        print(f"Total folders:     {visualizer.stats['total_folders']}")
+        print(f"Total files:       {visualizer.stats['total_files']}")
+        print(f"Max depth:         {visualizer.stats['max_depth']}")
+        print(f"Depths to process: {args.depths}")
+        
+        # Show folders by depth from stats
+        if visualizer.stats['folders_by_depth']:
+            print("\nFolders at each depth:")
+            for depth, count in sorted(visualizer.stats['folders_by_depth'].items()):
+                if count > 0 and depth in args.depths:
                     print(f"  Depth {depth}: {count} folders")
-            
-            print("=" * 50)
+        
+        print("=" * 50)
         
         # Exit after visualization
         return 0
@@ -540,16 +532,22 @@ def main():
     # Create analysis strategy based on --analyze parameter
     analysis_strategy = StrategyFactory.create_strategy(
         args.analyze,
-        verbose=verbosity
+        scanner,
+        args.strategy
     )
     
     # If verbose, show analysis strategy info
     if verbosity >= 1 and not args.quiet:
-        strategy_info = analysis_strategy.get_info()
-        print(f"Analysis:      {strategy_info['name']}")
-        if strategy_info.get('description'):
-            print(f"               {strategy_info['description']}")
-        print()
+        try:
+            strategy_info = analysis_strategy.get_info()
+            print(f"Analysis:      {strategy_info['name']}")
+            if strategy_info.get('description'):
+                print(f"               {strategy_info['description']}")
+            print()
+        except AttributeError:
+            # get_info method is optional
+            print(f"Analysis:      {analysis_strategy.get_name()}")
+            print()
     
     # Track overall statistics
     total_stats = {
@@ -578,17 +576,9 @@ def main():
             report_file = None
     
     try:
-        # Scan folders at specified depths
-        if not args.quiet:
-            print("Scanning folders...")
-        
-        folders_to_process = scanner.scan_at_depths(target_path, args.depths, args.strategy)
-        
-        if not args.quiet:
-            print(f"Found {len(folders_to_process)} folders to process\n")
-        
         # Analyze folders using the selected strategy
         if not args.quiet:
+            print("Scanning folders...")
             if args.dry_run:
                 print("Previewing changes...")
             else:
@@ -596,66 +586,91 @@ def main():
             print()
         
         # Process folders with analysis strategy
-        analysis_results = analysis_strategy.analyze(folders_to_process, scanner, args.strategy)
+        analysis_results = analysis_strategy.analyze(target_path, args.depths)
+        
+        if not args.quiet:
+            print(f"Found {len(analysis_results)} folders to process\n")
         
         # Apply fixes based on analysis results
-        for folder_path, timestamps in analysis_results.items():
-            if folder_path in folders_to_process:
-                original_time = folders_to_process[folder_path]
-                
-                # Determine if change is needed
-                if timestamps and timestamps.get('newest'):
-                    new_time = timestamps['newest']
+        for folder_path, new_time in analysis_results:
+            # Get current folder timestamp for comparison
+            try:
+                original_time = datetime.fromtimestamp(folder_path.stat().st_mtime)
+            except (OSError, ValueError):
+                original_time = None
+            
+            # Determine if change is needed
+            if new_time and original_time:
+                # Check if times differ
+                if original_time != new_time:
+                    # Apply the fix
+                    success = fixer.fix_folder_timestamp(folder_path, new_time)
                     
-                    # Check if times differ
-                    if original_time != new_time:
-                        # Apply the fix
-                        success = fixer.fix_folder_timestamp(folder_path, new_time)
-                        
-                        if success:
-                            total_stats['folders_changed'] += 1
-                            status = "CHANGED"
-                        else:
-                            total_stats['folders_error'] += 1
-                            status = "ERROR"
-                        
-                        # Show verbose output
-                        if verbosity >= 1 and not args.quiet:
-                            print(f"{'[DRY RUN] ' if args.dry_run else ''}{folder_path}")
-                            print(f"  Original: {format_timestamp(original_time)}")
-                            print(f"  New:      {format_timestamp(new_time)}")
-                            print(f"  Status:   {status}")
-                            print()
+                    if success:
+                        total_stats['folders_changed'] += 1
+                        status = "CHANGED"
                     else:
-                        total_stats['folders_skipped'] += 1
-                        status = "SKIPPED"
-                        
-                        if verbosity >= 2 and not args.quiet:
-                            print(f"{folder_path}")
-                            print(f"  Status:   {status} (already correct)")
-                            print()
+                        total_stats['folders_error'] += 1
+                        status = "ERROR"
+                    
+                    # Show verbose output
+                    if verbosity >= 1 and not args.quiet:
+                        print(f"{'[DRY RUN] ' if args.dry_run else ''}{folder_path}")
+                        print(f"  Original: {format_timestamp(original_time)}")
+                        print(f"  New:      {format_timestamp(new_time)}")
+                        print(f"  Status:   {status}")
+                        print()
                 else:
-                    # Empty folder or no valid timestamps
-                    total_stats['empty_folders'] += 1
-                    status = "EMPTY"
+                    total_stats['folders_skipped'] += 1
+                    status = "SKIPPED"
                     
                     if verbosity >= 2 and not args.quiet:
                         print(f"{folder_path}")
-                        print(f"  Status:   {status} (no files)")
+                        print(f"  Status:   {status} (already correct)")
                         print()
+            elif new_time and not original_time:
+                # Could not get original time, but we have a new time
+                success = fixer.fix_folder_timestamp(folder_path, new_time)
                 
-                # Write to report file
-                if report_file:
-                    orig_str = format_timestamp(original_time) if original_time else "N/A"
-                    new_str = format_timestamp(timestamps.get('newest')) if timestamps and timestamps.get('newest') else "N/A"
-                    report_file.write(f'"{folder_path}","{orig_str}","{new_str}","{status}"\n')
+                if success:
+                    total_stats['folders_changed'] += 1
+                    status = "CHANGED"
+                else:
+                    total_stats['folders_error'] += 1
+                    status = "ERROR"
+                    
+                if verbosity >= 1 and not args.quiet:
+                    print(f"{'[DRY RUN] ' if args.dry_run else ''}{folder_path}")
+                    print(f"  Original: Unable to read")
+                    print(f"  New:      {format_timestamp(new_time)}")
+                    print(f"  Status:   {status}")
+                    print()
+            else:
+                # Empty folder or no valid timestamps
+                total_stats['empty_folders'] += 1
+                status = "EMPTY"
                 
-                total_stats['total_folders'] += 1
+                if verbosity >= 2 and not args.quiet:
+                    print(f"{folder_path}")
+                    print(f"  Status:   {status} (no files or no timestamp)")
+                    print()
+            
+            # Write to report file
+            if report_file:
+                orig_str = format_timestamp(original_time) if original_time else "N/A"
+                new_str = format_timestamp(new_time) if new_time else "N/A"
+                report_file.write(f'"{folder_path}","{orig_str}","{new_str}","{status}"\n')
+            
+            total_stats['total_folders'] += 1
         
-        # Add strategy-specific statistics
-        strategy_stats = analysis_strategy.get_statistics()
-        if strategy_stats:
-            total_stats.update(strategy_stats)
+        # Add strategy-specific statistics if available
+        try:
+            strategy_stats = analysis_strategy.get_statistics()
+            if strategy_stats:
+                total_stats.update(strategy_stats)
+        except AttributeError:
+            # get_statistics method is optional
+            pass
         
         # Print summary
         if not args.quiet:
