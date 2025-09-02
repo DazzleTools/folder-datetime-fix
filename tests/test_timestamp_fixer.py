@@ -221,7 +221,7 @@ class TestTimestampFixerIntegration(unittest.TestCase):
     
     def test_full_workflow(self):
         """Test complete scan and fix workflow."""
-        from folder_datetime_fix.folder_scanner import FolderScanner
+        from folder_datetime_fix.folder_scanner_dazzle import FolderScanner
         
         # Create test structure
         base = Path(self.test_dir)

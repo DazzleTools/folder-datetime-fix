@@ -6,8 +6,8 @@ import shutil
 from pathlib import Path
 from datetime import datetime, timedelta
 
-from folder_datetime_fix.folder_scanner import FolderScanner
-from folder_datetime_fix.analysis_strategies import (
+from folder_datetime_fix.folder_scanner_dazzle import FolderScanner
+from folder_datetime_fix.analysis_strategies_dazzle import (
     AnalysisStrategy,
     StandardStrategy,
     LowMemoryStrategy,
@@ -116,7 +116,7 @@ class TestAnalysisStrategies(unittest.TestCase):
     
     def test_folder_only_strategy(self):
         """Test FolderOnlyStrategy (ultra-minimal mode)."""
-        from folder_datetime_fix.analysis_strategies import FolderOnlyStrategy
+        from folder_datetime_fix.analysis_strategies_dazzle import FolderOnlyStrategy
         strategy = FolderOnlyStrategy(self.scanner)
         self.assertEqual(strategy.get_name(), 'folder-only')
         self.assertIn('minimal', strategy.get_description().lower())

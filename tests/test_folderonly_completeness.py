@@ -6,8 +6,8 @@ import unittest
 import tempfile
 import shutil
 from pathlib import Path
-from folder_datetime_fix.folder_scanner import FolderScanner
-from folder_datetime_fix.analysis_strategies import FolderOnlyStrategy
+from folder_datetime_fix.folder_scanner_dazzle import FolderScanner
+from folder_datetime_fix.analysis_strategies_dazzle import FolderOnlyStrategy
 from folder_datetime_fix.cache import CacheCompleteness
 
 

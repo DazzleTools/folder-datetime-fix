@@ -7,8 +7,8 @@ import tempfile
 import shutil
 from pathlib import Path
 from datetime import datetime
-from folder_datetime_fix.folder_scanner import FolderScanner
-from folder_datetime_fix.analysis_strategies import TreeStrategy, FolderOnlyStrategy
+from folder_datetime_fix.folder_scanner_dazzle import FolderScanner
+from folder_datetime_fix.analysis_strategies_dazzle import TreeStrategy, FolderOnlyStrategy
 
 
 class TestFolderOnlyStrategy(unittest.TestCase):

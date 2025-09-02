@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import shutil
 from unittest.mock import patch, MagicMock
-from folder_datetime_fix.folder_scanner import FolderScanner
+from folder_datetime_fix.folder_scanner_dazzle import FolderScanner
 
 
 class TestEarlyTermination(unittest.TestCase):

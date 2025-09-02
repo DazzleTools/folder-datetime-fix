@@ -5,11 +5,22 @@
 The folder-datetime-fix tool is designed with a modular, extensible architecture that separates concerns into distinct layers:
 
 1. **Command-line Interface** (CLI) - User interaction layer
-2. **Analysis Strategies** - Different approaches to folder traversal
-3. **Folder Scanner** - Core timestamp computation engine  
-4. **Cache System** - Performance optimization with completeness tracking
-5. **Visualization** - Tree rendering and progress display
-6. **Timestamp Fixer** - Actual filesystem modification
+2. **DazzleTreeLib Integration** - Universal tree traversal with adapters
+3. **Analysis Strategies** - Different approaches to folder traversal (now using DazzleTreeLib)
+4. **Folder Scanner** - Core timestamp computation engine (powered by DazzleTreeLib)
+5. **Cache System** - Performance optimization with completeness tracking
+6. **Visualization** - Tree rendering and progress display
+7. **Timestamp Fixer** - Actual filesystem modification
+
+## DazzleTreeLib Integration (NEW)
+
+As of version 0.7.0, folder-datetime-fix has been migrated to use DazzleTreeLib as its tree traversal engine. This provides:
+
+- **78% code reduction** - Removed ~1,094 lines of custom traversal code
+- **O(1) depth tracking** - 5-10x performance improvement over O(depth) recalculation
+- **Composable adapters** - Stack adapters for timestamp calculation, caching, and depth tracking
+- **Async/await patterns** - Modern Python async support throughout
+- **Post-order traversal** - Native bottom-up processing for TreeStrategy
 
 ## Component Interaction Diagram
 
@@ -30,20 +41,21 @@ User Input (CLI)
 └─────────────────────────────────────────────────┘
     ↓
 ┌─────────────────────────────────────────────────┐
-│           AnalysisStrategy (Abstract)           │
-│  - StandardStrategy (uses scan_and_collect)     │
-│  - LowMemoryStrategy (no cache)                 │
-│  - TreeStrategy (bottom-up with tree)           │
-│  - FolderOnlyStrategy (minimal memory)          │
-│  - AutoStrategy (adaptive selection)            │
+│         DazzleStrategy (Abstract)               │
+│  - StandardDazzleStrategy (adaptive caching)    │
+│  - LowMemoryDazzleStrategy (no cache)           │
+│  - TreeDazzleStrategy (bottom-up with tree)     │
+│  - FolderOnlyDazzleStrategy (minimal memory)    │
+│  - AutoStrategy → StandardDazzleStrategy        │
 └─────────────────────────────────────────────────┘
     ↓
 ┌─────────────────────────────────────────────────┐
-│              FolderScanner                      │
-│  - get_shallow_timestamp()                      │
-│  - get_deep_timestamp()                         │
-│  - get_smart_timestamp()                        │
-│  - scan_and_collect() [main workhorse]          │
+│              DazzleTreeLib Stack                │
+│  - AsyncFileSystemAdapter (base I/O)            │
+│  - TimestampCalculationAdapter (shallow/deep)   │
+│  - CompletenessAwareCacheAdapter (LRU cache)    │
+│  - DepthTrackingAdapter (O(1) depth)            │
+│  - Post-order traversal functions               │
 └─────────────────────────────────────────────────┘
     ↓
 ┌─────────────────────────────────────────────────┐

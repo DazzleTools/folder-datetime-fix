@@ -7,7 +7,7 @@ corrupt folder dates.
 """
 
 from .version import __version__, get_version, get_base_version
-from .folder_scanner import FolderScanner
+from .folder_scanner_dazzle import FolderScanner
 from .timestamp_fixer import TimestampFixer
 from .unc_handler import get_unc_handler
 

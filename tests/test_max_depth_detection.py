@@ -5,7 +5,7 @@ import tempfile
 import shutil
 from pathlib import Path
 
-from folder_datetime_fix.folder_scanner import FolderScanner
+from folder_datetime_fix.folder_scanner_dazzle import FolderScanner
 
 
 class TestMaxDepthDetection(unittest.TestCase):

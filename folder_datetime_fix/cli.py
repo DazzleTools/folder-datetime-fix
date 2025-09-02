@@ -12,13 +12,13 @@ import sys
 from pathlib import Path
 from datetime import datetime
 
-from .folder_scanner import FolderScanner
+from .folder_scanner_dazzle import FolderScanner
 from .timestamp_fixer import TimestampFixer
 from .unc_handler import get_unc_handler
 from .help.topics.help_topics import handle_help_topic
 from .version import __version__, get_base_version
 from .trace_utils import trace, set_verbosity
-from .analysis_strategies import StrategyFactory
+from .analysis_strategies_dazzle import StrategyFactory
 from .tree_visualizer import TreeVisualizer
 
 MAX_DEPTH_INFINITE = 100  # Reasonable maximum for "infinite" depth
