@@ -91,18 +91,39 @@ class DazzleTreeScanner:
         Returns:
             Maximum depth found in the tree
         """
-        async def _detect():
-            max_depth = 0
-            
-            async for node, depth in traverse_with_depth(base_path, max_depth=limit):
-                if depth > max_depth:
-                    max_depth = depth
-                    if self.verbose >= 3:
-                        print(f"  New max depth: {max_depth}")
-            
-            return max_depth
+        import os
+        max_depth = 0
         
-        return asyncio.run(_detect())
+        # Manual BFS that respects exclusion filter
+        current_level = [(base_path, 0)]
+        visited = set()
+        
+        while current_level and max_depth < limit:
+            next_level = []
+            
+            for path, depth in current_level:
+                if str(path) in visited:
+                    continue
+                visited.add(str(path))
+                
+                # Update max depth for valid (non-excluded) folders
+                if not self.exclusion_filter.should_exclude(path, is_dir=True):
+                    max_depth = max(max_depth, depth)
+                    
+                    # Only explore children of non-excluded folders
+                    try:
+                        for entry in os.scandir(path):
+                            if entry.is_dir():
+                                child_path = Path(entry.path)
+                                # Don't add excluded folders to next level
+                                if not self.exclusion_filter.should_exclude(child_path, is_dir=True):
+                                    next_level.append((child_path, depth + 1))
+                    except (OSError, PermissionError):
+                        pass
+            
+            current_level = next_level
+        
+        return max_depth
     
     @trace
     def get_folders_at_depth(self, base_path: Path, depth: int) -> List[Path]:
@@ -227,10 +248,17 @@ class DazzleTreeScanner:
             results = []
             processed = set()
             
+            # Track consecutive empty depths for early termination
+            consecutive_empty = 0
+            max_depth_reached = -1
+            
             # Process each depth level
             for target_depth in sorted(depths):
                 if self.verbose >= 2:
                     print(f"Scanning at depth {target_depth}...")
+                
+                # Track folders found at this depth
+                folders_at_depth = 0
                 
                 # Collect folders at this depth
                 async for level_depth, nodes in traverse_tree_by_level(base_path, max_depth=target_depth):
@@ -243,7 +271,20 @@ class DazzleTreeScanner:
                                     timestamp = await self.timestamp_adapter.calculate_timestamp(node)
                                     results.append((node.path, timestamp))
                                     processed.add(str(node.path))
+                                    folders_at_depth += 1
                         break
+                
+                # Early termination optimization
+                if folders_at_depth == 0:
+                    consecutive_empty += 1
+                    # Allow one gap in case of unusual tree structure, but stop after 2 consecutive empty
+                    if consecutive_empty >= 2 and target_depth > 0:
+                        if self.verbose >= 1:
+                            print(f"Stopping scan early - no folders found after depth {max_depth_reached}")
+                        break
+                else:
+                    consecutive_empty = 0
+                    max_depth_reached = target_depth
             
             return results
         

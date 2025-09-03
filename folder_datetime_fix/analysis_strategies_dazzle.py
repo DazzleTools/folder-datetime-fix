@@ -316,9 +316,16 @@ class TreeDazzleStrategy(DazzleStrategy):
             # For tree mode, we collect all folders first, then process bottom-up
             all_folders = {}
             
+            # Use the adapter stack for traversal - this respects exclusions
+            from dazzletreelib.aio.core.depth_traverser import AsyncLevelOrderDepthTraverser
+            traverser = AsyncLevelOrderDepthTraverser()
+            root_node = AsyncFileSystemNode(base_path)
+            
             # First pass: collect all folders at requested depths
             for target_depth in sorted(depths):
-                async for level_depth, nodes in traverse_tree_by_level(base_path, max_depth=target_depth):
+                async for level_depth, nodes in traverser.traverse_by_level(
+                    root_node, self.adapter_stack, max_depth=target_depth
+                ):
                     if level_depth == target_depth:
                         for node in nodes:
                             if node.path.is_dir():
@@ -330,12 +337,13 @@ class TreeDazzleStrategy(DazzleStrategy):
             # Sort by depth (deepest first) for bottom-up processing
             sorted_folders = sorted(all_folders.values(), key=lambda x: x[1], reverse=True)
             
+            # Use deep strategy for bottom-up to ensure we get all child timestamps
             timestamp_adapter = self._get_timestamp_adapter()
             for folder_path, depth in sorted_folders:
                 if str(folder_path) not in processed:
                     node = AsyncFileSystemNode(folder_path)
-                    # Use smart strategy for tree mode
-                    timestamp_adapter.strategy = 'smart'
+                    # Use deep strategy to ensure parent includes children
+                    timestamp_adapter.strategy = 'deep'
                     timestamp = await timestamp_adapter.calculate_timestamp(node)
                     results.append((folder_path, timestamp))
                     processed.add(str(folder_path))
