@@ -119,8 +119,9 @@ class StandardDazzleStrategy(DazzleStrategy):
         # Add depth tracking
         depth = DepthTrackingAdapter(base)
         
-        # Add timestamp calculation
-        timestamp = TimestampCalculationAdapter(depth, strategy=self.scan_strategy)
+        # Add timestamp calculation with exclusion filter
+        timestamp = TimestampCalculationAdapter(depth, strategy=self.scan_strategy, 
+                                               exclusion_filter=self.exclusion_filter)
         
         # Add cache completeness tracking
         cache = CompletenessAwareCacheAdapter(timestamp, max_memory_mb=100)
