@@ -223,8 +223,12 @@ class LowMemoryDazzleStrategy(DazzleStrategy):
             follow_symlinks=False
         )
         
-        # Add timestamp calculation only (no caching)
-        timestamp = TimestampCalculationAdapter(base, strategy=self.scan_strategy)
+        # Add timestamp calculation only (no caching) with exclusion filter
+        timestamp = TimestampCalculationAdapter(
+            base, 
+            strategy=self.scan_strategy,
+            exclusion_filter=self.exclusion_filter
+        )
         
         return timestamp
     
@@ -290,8 +294,12 @@ class TreeDazzleStrategy(DazzleStrategy):
         # Add depth tracking for efficient tree operations
         depth = DepthTrackingAdapter(base)
         
-        # Add smart timestamp calculation for folders
-        timestamp = TimestampCalculationAdapter(depth, strategy='smart')
+        # Add smart timestamp calculation for folders with exclusion filter
+        timestamp = TimestampCalculationAdapter(
+            depth, 
+            strategy='smart',
+            exclusion_filter=self.exclusion_filter
+        )
         
         # Add caching with completeness tracking for tree mode
         cache = CompletenessAwareCacheAdapter(timestamp, max_memory_mb=50)
@@ -382,8 +390,12 @@ class FolderOnlyDazzleStrategy(DazzleStrategy):
             follow_symlinks=False
         )
         
-        # Add shallow timestamp calculation (folder-only)
-        timestamp = TimestampCalculationAdapter(base, strategy='shallow')
+        # Add shallow timestamp calculation (folder-only) with exclusion filter
+        timestamp = TimestampCalculationAdapter(
+            base, 
+            strategy='shallow',
+            exclusion_filter=self.exclusion_filter
+        )
         
         # Add lightweight caching
         cache = CompletenessAwareCacheAdapter(timestamp, max_memory_mb=25)
@@ -394,39 +406,42 @@ class FolderOnlyDazzleStrategy(DazzleStrategy):
     def analyze(self, base_path: Path, depths: List[int]) -> List[Tuple[Path, Optional[datetime]]]:
         """Process folders efficiently without storing file details."""
         async def _analyze():
+            from dazzletreelib.aio.core.depth_traverser import AsyncLevelOrderDepthTraverser
+            from dazzletreelib.aio import AsyncFileSystemNode
+            
             results = []
+            
+            # Set depth context on cache adapter if available
+            if hasattr(self.adapter_stack, 'set_depth_context'):
+                # Set context for the deepest level we'll scan
+                max_depth = max(depths) if depths else 1
+                self.adapter_stack.set_depth_context(max_depth)
+            
+            # Use our adapter stack with the traverser
+            root_node = AsyncFileSystemNode(base_path)
+            traverser = AsyncLevelOrderDepthTraverser()
             
             # Process all depths in a single pass
             max_depth = max(depths) if depths else 100
             depth_set = set(depths)
             
-            async for level_depth, nodes in traverse_tree_by_level(base_path, max_depth=max_depth):
+            # Use traverse_by_level which accepts an adapter
+            async for level_depth, nodes in traverser.traverse_by_level(
+                root_node, 
+                self.adapter_stack,
+                max_depth=max_depth
+            ):
                 if level_depth in depth_set:
                     for node in nodes:
                         if node.path.is_dir():
                             if not self.exclusion_filter.should_exclude(node.path, is_dir=True):
-                                # Get shallow timestamp (immediate children only)
-                                # Get the timestamp adapter from the stack
-                                timestamp_adapter = None
-                                adapter = self.adapter_stack
-                                while adapter:
-                                    if isinstance(adapter, TimestampCalculationAdapter):
-                                        timestamp_adapter = adapter
-                                        break
-                                    if hasattr(adapter, 'base_adapter'):
-                                        adapter = adapter.base_adapter
-                                    else:
-                                        break
-                                
+                                # Get timestamp from our timestamp adapter
+                                timestamp_adapter = self._get_timestamp_adapter()
                                 if timestamp_adapter:
                                     timestamp = await timestamp_adapter.calculate_timestamp(node)
                                 else:
-                                    # Fallback - create new one
-                                    timestamp_adapter = TimestampCalculationAdapter(
-                                        AsyncFileSystemAdapter(), 
-                                        strategy='shallow'
-                                    )
-                                    timestamp = await timestamp_adapter.calculate_timestamp(node)
+                                    # Fallback - should not happen
+                                    timestamp = datetime.fromtimestamp(node.path.stat().st_mtime)
                                 
                                 results.append((node.path, timestamp))
                 
@@ -440,6 +455,18 @@ class FolderOnlyDazzleStrategy(DazzleStrategy):
             return results
         
         return asyncio.run(_analyze())
+    
+    def _get_timestamp_adapter(self):
+        """Get the timestamp adapter from the stack."""
+        adapter = self.adapter_stack
+        while adapter:
+            if isinstance(adapter, TimestampCalculationAdapter):
+                return adapter
+            if hasattr(adapter, 'base_adapter'):
+                adapter = adapter.base_adapter
+            else:
+                break
+        return None
     
     def get_name(self) -> str:
         return "dazzle-folder-only"
@@ -524,17 +551,24 @@ class StrategyFactory:
         exclusion_filter = getattr(scanner, 'exclusion_filter', None)
         verbose = getattr(scanner, 'verbose', 0)
         
+        # Check for modifiers
+        force_low_memory = 'low-memory' in options
+        
         # Create base strategy
         if primary == 'tree':
             strategy = TreeDazzleStrategy(exclusion_filter, verbose)
         elif primary == 'folder-only' or primary == 'folders':
             strategy = FolderOnlyDazzleStrategy(exclusion_filter, verbose)
-        elif primary == 'low-memory':
+        elif primary == 'low-memory' or force_low_memory:
             strategy = LowMemoryDazzleStrategy(scan_strategy, exclusion_filter, verbose)
         elif primary == 'auto':
-            # Auto strategy: use standard for now (could be smarter)
-            # TODO: Implement proper auto-selection based on file count
-            strategy = StandardDazzleStrategy(scan_strategy, exclusion_filter, verbose)
+            # Check if low-memory modifier is present
+            if force_low_memory:
+                strategy = LowMemoryDazzleStrategy(scan_strategy, exclusion_filter, verbose)
+            else:
+                # Auto strategy: use standard for now (could be smarter)
+                # TODO: Implement proper auto-selection based on file count
+                strategy = StandardDazzleStrategy(scan_strategy, exclusion_filter, verbose)
         else:
             # Default to standard
             strategy = StandardDazzleStrategy(scan_strategy, exclusion_filter, verbose)

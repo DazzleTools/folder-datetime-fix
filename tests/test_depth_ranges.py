@@ -108,11 +108,9 @@ class TestDepthRangeIntegration(unittest.TestCase):
     
     def test_depth_range_actual_folders(self):
         """Test that depth range actually processes correct folders."""
-        from folder_datetime_fix.folder_scanner_dazzle import FolderScanner
-        from folder_datetime_fix.analysis_strategies_dazzle import StandardStrategy
+        from folder_datetime_fix.analysis_strategies_dazzle import StandardDazzleStrategy
         
-        scanner = FolderScanner(verbose=0)
-        strategy = StandardStrategy(scanner, 'shallow')
+        strategy = StandardDazzleStrategy(scan_strategy='shallow', verbose=0)
         
         # Process depths 1-3
         results = strategy.analyze(self.test_path, [1, 2, 3])
@@ -132,11 +130,9 @@ class TestDepthRangeIntegration(unittest.TestCase):
     
     def test_depth_to_processes_all_levels(self):
         """Test that --depth-to processes all levels in range."""
-        from folder_datetime_fix.folder_scanner_dazzle import FolderScanner
-        from folder_datetime_fix.analysis_strategies_dazzle import StandardStrategy
+        from folder_datetime_fix.analysis_strategies_dazzle import StandardDazzleStrategy
         
-        scanner = FolderScanner(verbose=0)
-        strategy = StandardStrategy(scanner, 'shallow')
+        strategy = StandardDazzleStrategy(scan_strategy='shallow', verbose=0)
         
         # Process depths 0-3 (simulating --depth-to 3)
         depths = list(range(4))  # 0, 1, 2, 3

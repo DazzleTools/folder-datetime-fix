@@ -6,9 +6,8 @@ import unittest
 import tempfile
 import shutil
 from pathlib import Path
-from folder_datetime_fix.folder_scanner_dazzle import FolderScanner
-from folder_datetime_fix.analysis_strategies_dazzle import FolderOnlyStrategy
-from folder_datetime_fix.cache import CacheCompleteness
+from folder_datetime_fix.analysis_strategies_dazzle import FolderOnlyDazzleStrategy
+from dazzletreelib.testing import TestableCache
 
 
 class TestFolderOnlyCompleteness(unittest.TestCase):
@@ -45,39 +44,47 @@ class TestFolderOnlyCompleteness(unittest.TestCase):
     
     def test_completeness_tracking(self):
         """Test that completeness levels are properly set."""
-        scanner = FolderScanner(use_cache=True, verbose=0)
-        strategy = FolderOnlyStrategy(scanner)
+        strategy = FolderOnlyDazzleStrategy(verbose=0)
         
         # Scan to depth 2
         results = strategy.analyze(self.test_path, [0, 1, 2])
         
-        # Check cache entries
-        cache = scanner.cache.cache
+        # Get cache from strategy's adapter stack
+        cache_adapter = strategy.adapter_stack  # This is the CompletenessAwareCacheAdapter
+        testable = TestableCache(cache_adapter)
         
-        # Root: scanned to depth 2
-        self.assertIn(self.test_path, cache)
-        root_entry = cache[self.test_path]
-        self.assertEqual(root_entry.completeness, CacheCompleteness.PARTIAL_2)
+        # Verify cache was populated
+        summary = testable.get_summary()
+        self.assertGreater(summary['total_entries'], 0)
+        self.assertTrue(summary['has_cache'])
         
-        # folder1: scanned 1 deep from its perspective
-        folder1_entry = cache[self.test_path / 'folder1']
-        self.assertEqual(folder1_entry.completeness, CacheCompleteness.SHALLOW)
+        # Root: scanned to depth 2 (PARTIAL_2)
+        self.assertTrue(testable.was_path_cached(self.test_path))
+        self.assertTrue(testable.has_partial_depth(self.test_path, 2))
+        
+        # folder1: scanned 1 deep (SHALLOW)
+        folder1 = self.test_path / 'folder1'
+        self.assertTrue(testable.was_path_cached(folder1))
+        self.assertTrue(testable.has_partial_depth(folder1, 1))
         
         # sub2: no subdirs, should be COMPLETE
-        sub2_entry = cache[self.test_path / 'folder1' / 'sub2']
-        self.assertEqual(sub2_entry.completeness, CacheCompleteness.COMPLETE)
-        self.assertFalse(sub2_entry.has_subdirs)
+        sub2 = self.test_path / 'folder1' / 'sub2'
+        self.assertTrue(testable.was_path_cached(sub2))
+        # Leaf directories are marked complete
+        self.assertTrue(testable.has_partial_depth(sub2, 6))  # 6+ means COMPLETE
     
     def test_cache_reuse(self):
         """Test that cache is reused on subsequent runs."""
-        scanner = FolderScanner(use_cache=True, verbose=0)
-        strategy = FolderOnlyStrategy(scanner)
+        strategy = FolderOnlyDazzleStrategy(verbose=0)
         
         # First run
         results1 = strategy.analyze(self.test_path, [0, 1])
         
         # Check cache was populated
-        self.assertGreater(len(scanner.cache.cache), 0)
+        cache_adapter = strategy.adapter_stack
+        testable = TestableCache(cache_adapter)
+        summary = testable.get_summary()
+        self.assertGreater(summary['total_entries'], 0)
         
         # Second run - should use cache
         results2 = strategy.analyze(self.test_path, [0, 1])
@@ -85,22 +92,22 @@ class TestFolderOnlyCompleteness(unittest.TestCase):
         # Should get same results
         self.assertEqual(len(results1), len(results2))
         
-        # Cache entries should be the same
+        # Verify cache entries are reusable
         for path, _ in results1:
-            self.assertIn(path, scanner.cache.cache)
+            self.assertTrue(testable.verify_cache_reuse(path))
     
     def test_incremental_scanning(self):
         """Test scanning incrementally deeper."""
-        scanner = FolderScanner(use_cache=True, verbose=0)
-        strategy = FolderOnlyStrategy(scanner)
+        strategy = FolderOnlyDazzleStrategy(verbose=0)
+        cache_adapter = strategy.adapter_stack
+        testable = TestableCache(cache_adapter)
         
         # First: shallow scan
         results1 = strategy.analyze(self.test_path, [0, 1])
         shallow_folders = set(r[0] for r in results1)
         
-        # Cache should have shallow completeness
-        root_entry = scanner.cache.cache[self.test_path]
-        self.assertEqual(root_entry.completeness, CacheCompleteness.SHALLOW)
+        # Cache should have shallow completeness for root
+        self.assertTrue(testable.has_partial_depth(self.test_path, 1))
         
         # Second: deeper scan
         results2 = strategy.analyze(self.test_path, [0, 1, 2])
@@ -109,14 +116,14 @@ class TestFolderOnlyCompleteness(unittest.TestCase):
         # Should have more folders
         self.assertGreater(len(all_folders), len(shallow_folders))
         
-        # Root should now have deeper completeness
-        root_entry_updated = scanner.cache.cache[self.test_path]
-        self.assertEqual(root_entry_updated.completeness, CacheCompleteness.PARTIAL_2)
+        # Root should now have deeper completeness (PARTIAL_2)
+        self.assertTrue(testable.has_partial_depth(self.test_path, 2))
     
     def test_complete_folder_pruning(self):
         """Test that complete folders prune traversal."""
-        scanner = FolderScanner(use_cache=True, verbose=0)
-        strategy = FolderOnlyStrategy(scanner)
+        strategy = FolderOnlyDazzleStrategy(verbose=0)
+        cache_adapter = strategy.adapter_stack
+        testable = TestableCache(cache_adapter)
         
         # Create a leaf folder
         leaf = self.test_path / 'leaf_folder'
@@ -126,19 +133,23 @@ class TestFolderOnlyCompleteness(unittest.TestCase):
         # First scan
         results1 = strategy.analyze(self.test_path, [0, 1])
         
-        # Leaf should be marked complete
-        leaf_entry = scanner.cache.cache[leaf]
-        self.assertEqual(leaf_entry.completeness, CacheCompleteness.COMPLETE)
+        # Leaf should be marked complete (no subdirs)
+        self.assertTrue(testable.was_path_cached(leaf))
+        # Leaf folders with no subdirs are marked COMPLETE
+        self.assertTrue(testable.has_partial_depth(leaf, 6))  # 6+ indicates COMPLETE
         
         # Second scan should reuse cached complete folder
-        # (Would need to instrument to verify pruning actually happens)
         results2 = strategy.analyze(self.test_path, [0, 1])
         self.assertEqual(len(results1), len(results2))
+        
+        # Verify leaf is still cached and complete
+        self.assertTrue(testable.verify_cache_reuse(leaf))
     
     def test_mixed_depths(self):
         """Test non-contiguous depth specifications."""
-        scanner = FolderScanner(use_cache=True, verbose=0)
-        strategy = FolderOnlyStrategy(scanner)
+        strategy = FolderOnlyDazzleStrategy(verbose=0)
+        cache_adapter = strategy.adapter_stack
+        testable = TestableCache(cache_adapter)
         
         # Scan depths 0 and 2 (skip 1)
         results = strategy.analyze(self.test_path, [0, 2])
@@ -157,6 +168,11 @@ class TestFolderOnlyCompleteness(unittest.TestCase):
         self.assertIn(0, found_depths)
         self.assertIn(2, found_depths)
         self.assertNotIn(1, found_depths)
+        
+        # Verify caching worked for processed paths
+        self.assertTrue(testable.was_path_cached(self.test_path))
+        summary = testable.get_summary()
+        self.assertGreater(summary['total_entries'], 0)
 
 
 if __name__ == '__main__':

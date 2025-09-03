@@ -64,10 +64,11 @@ class DazzleTreeScanner:
         # Add depth tracking for O(1) depth calculation
         depth_adapter = DepthTrackingAdapter(base_adapter)
         
-        # Add timestamp calculation strategies
+        # Add timestamp calculation strategies with exclusion filter
         self.timestamp_adapter = TimestampCalculationAdapter(
             depth_adapter,
-            strategy='smart'  # Default to smart strategy
+            strategy='smart',  # Default to smart strategy
+            exclusion_filter=self.exclusion_filter
         )
         
         # Add cache completeness tracking if caching is enabled
@@ -148,7 +149,10 @@ class DazzleTreeScanner:
         
         async def _get_timestamp():
             node = AsyncFileSystemNode(folder_path)
-            return await self.timestamp_adapter.calculate_timestamp(node)
+            result = await self.timestamp_adapter.calculate_timestamp(node)
+            if self.verbose >= 3:
+                print(f"DEBUG get_shallow_timestamp: path={folder_path}, result={result}")
+            return result
         
         return asyncio.run(_get_timestamp())
     
