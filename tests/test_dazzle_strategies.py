@@ -52,7 +52,7 @@ def create_test_tree(base_path: Path):
     return base_path
 
 
-def test_strategy(strategy, name: str, base_path: Path):
+def check_strategy(strategy, name: str, base_path: Path):
     """Test a single strategy."""
     print(f"\nTesting {name}...")
     print(f"  Description: {strategy.get_description()}")
@@ -96,27 +96,27 @@ def test_dazzle_strategies():
         
         # Test 1: Standard Strategy (shallow)
         strategy = StandardDazzleStrategy('shallow', exclusion_filter, verbose=1)
-        test_strategy(strategy, "Standard Strategy (shallow)", test_path)
+        check_strategy(strategy, "Standard Strategy (shallow)", test_path)
         
         # Test 2: Standard Strategy (deep)
         strategy = StandardDazzleStrategy('deep', exclusion_filter, verbose=1)
-        test_strategy(strategy, "Standard Strategy (deep)", test_path)
+        check_strategy(strategy, "Standard Strategy (deep)", test_path)
         
         # Test 3: Standard Strategy (smart)
         strategy = StandardDazzleStrategy('smart', exclusion_filter, verbose=1)
-        test_strategy(strategy, "Standard Strategy (smart)", test_path)
+        check_strategy(strategy, "Standard Strategy (smart)", test_path)
         
         # Test 4: Low Memory Strategy
         strategy = LowMemoryDazzleStrategy('shallow', exclusion_filter, verbose=1)
-        test_strategy(strategy, "Low Memory Strategy", test_path)
+        check_strategy(strategy, "Low Memory Strategy", test_path)
         
         # Test 5: Tree Strategy
         strategy = TreeDazzleStrategy(exclusion_filter, verbose=1)
-        test_strategy(strategy, "Tree Strategy", test_path)
+        check_strategy(strategy, "Tree Strategy", test_path)
         
         # Test 6: Folder Only Strategy
         strategy = FolderOnlyDazzleStrategy(exclusion_filter, verbose=1)
-        test_strategy(strategy, "Folder Only Strategy", test_path)
+        check_strategy(strategy, "Folder Only Strategy", test_path)
         
         # Test 7: Factory function
         print("\nTesting factory function...")
