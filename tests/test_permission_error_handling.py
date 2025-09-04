@@ -211,7 +211,6 @@ class TestPermissionErrorHandling:
         assert len(processed) == 2
         assert "C:/test/System Volume Information" not in processed
     
-    @pytest.mark.skip(reason="Awaiting DazzleTreeLib adapter introspection feature - see https://github.com/djdarcy/dazzle-tree-lib/issues/1")
     @pytest.mark.asyncio
     async def test_async_iteration_with_permission_errors(self):
         """Test async iteration handles permission errors properly."""
@@ -242,13 +241,19 @@ class TestPermissionErrorHandling:
         
         # Should return empty list instead of raising
         children = []
-        async for child in await adapter.get_children(restricted_node):
-            children.append(child)
+        result = await adapter.get_children(restricted_node)
+        
+        # The adapter returns an empty list for permission errors
+        # not an async generator, based on ContinueOnErrorsPolicy
+        if hasattr(result, '__aiter__'):
+            async for child in result:
+                children.append(child)
+        elif hasattr(result, '__iter__'):
+            children = list(result)
         
         assert len(children) == 0
         assert Path("C:/System Volume Information") in policy.skipped_paths
     
-    @pytest.mark.skip(reason="Awaiting DazzleTreeLib adapter introspection feature - see https://github.com/djdarcy/dazzle-tree-lib/issues/1")
     def test_all_strategies_have_error_handling(self):
         """Verify all strategy classes have proper error handling."""
         strategies = [
@@ -285,7 +290,6 @@ class TestPermissionErrorHandling:
 class TestIntegrationWithDazzleTreeLib:
     """Test integration between modified_datetime_fix and DazzleTreeLib error handling."""
     
-    @pytest.mark.skip(reason="Awaiting DazzleTreeLib adapter introspection feature - see https://github.com/djdarcy/dazzle-tree-lib/issues/1")
     def test_error_policy_configuration(self):
         """Test that strategies use appropriate error policies."""
         from dazzletreelib.aio import ContinueOnErrorsPolicy
@@ -301,7 +305,6 @@ class TestIntegrationWithDazzleTreeLib:
         assert policy is not None, "Strategy missing error policy"
         assert isinstance(policy, ContinueOnErrorsPolicy)
         
-    @pytest.mark.skip(reason="Awaiting DazzleTreeLib adapter introspection feature - see https://github.com/djdarcy/dazzle-tree-lib/issues/1")
     def test_verbose_logging_configuration(self):
         """Test that verbose flag is passed to error policy."""
         strategy = StandardDazzleStrategy(
