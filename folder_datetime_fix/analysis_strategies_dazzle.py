@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import List, Tuple, Optional, Dict, Any
 from datetime import datetime
 import asyncio
+import sys
 
 from dazzletreelib.aio import (
     AsyncFileSystemNode,
@@ -24,21 +25,38 @@ from dazzletreelib.aio import (
 from .trace_utils import trace
 from .exclusion_filter import ExclusionFilter
 
+# Import our local error handling extensions
+from dazzletreelib.aio import (
+    ErrorHandlingAdapter,
+    FailFastPolicy,
+    ContinueOnErrorsPolicy,
+)
+
 
 class DazzleStrategy(ABC):
     """Base class for DazzleTreeLib-based analysis strategies."""
     
     def __init__(self, exclusion_filter: Optional[ExclusionFilter] = None, 
-                 verbose: int = 0):
+                 verbose: int = 0, strict: bool = False):
         """
         Initialize the strategy with DazzleTreeLib adapters.
         
         Args:
             exclusion_filter: Filter for excluding files/folders
             verbose: Verbosity level
+            strict: If True, exit on permission errors; if False, continue with warnings
         """
         self.exclusion_filter = exclusion_filter or ExclusionFilter.from_legacy(False)
         self.verbose = verbose
+        self.strict = strict
+        
+        # Create error policy based on strict flag
+        if strict:
+            self.error_policy = FailFastPolicy()
+        else:
+            self.error_policy = ContinueOnErrorsPolicy(verbose=verbose >= 1)
+        
+        # Build adapter stack with error handling
         self.adapter_stack = self._build_adapter_stack()
     
     @abstractmethod
@@ -84,10 +102,51 @@ class DazzleStrategy(ABC):
             config['adapter_stack'].append(adapter.__class__.__name__)
             if hasattr(adapter, 'base_adapter'):
                 adapter = adapter.base_adapter
+            elif hasattr(adapter, '_base_adapter'):
+                adapter = adapter._base_adapter
             else:
                 break
         
         return config
+    
+    def get_error_policy(self):
+        """Get the error policy if ErrorHandlingAdapter is in the stack."""
+        from dazzletreelib.aio import ErrorHandlingAdapter
+        
+        adapter = self.adapter_stack
+        while adapter:
+            if isinstance(adapter, ErrorHandlingAdapter):
+                return adapter._policy
+            # Try different attribute names used by different adapters
+            if hasattr(adapter, '_base_adapter'):
+                adapter = adapter._base_adapter
+            elif hasattr(adapter, 'base_adapter'):
+                adapter = adapter.base_adapter
+            else:
+                break
+        return None
+    
+    def has_error_handling(self) -> bool:
+        """Check if error handling is properly configured."""
+        return self.get_error_policy() is not None
+    
+    def get_statistics(self) -> Dict[str, Any]:
+        """Return statistics about the analysis, including skipped folders."""
+        stats = {}
+        
+        # Get statistics from error policy if it has them
+        if hasattr(self.error_policy, 'skipped_paths'):
+            stats['folders_skipped_permission'] = len(self.error_policy.skipped_paths)
+            stats['skipped_paths'] = self.error_policy.skipped_paths
+        else:
+            stats['folders_skipped_permission'] = 0
+            stats['skipped_paths'] = []
+        
+        # Add error details if available
+        if hasattr(self.error_policy, 'errors'):
+            stats['total_errors'] = len(self.error_policy.errors)
+        
+        return stats
 
 
 class StandardDazzleStrategy(DazzleStrategy):
@@ -95,7 +154,7 @@ class StandardDazzleStrategy(DazzleStrategy):
     
     def __init__(self, scan_strategy: str = 'shallow', 
                  exclusion_filter: Optional[ExclusionFilter] = None,
-                 verbose: int = 0):
+                 verbose: int = 0, strict: bool = False):
         """
         Initialize standard strategy.
         
@@ -103,21 +162,25 @@ class StandardDazzleStrategy(DazzleStrategy):
             scan_strategy: 'shallow', 'deep', or 'smart'
             exclusion_filter: Filter for excluding files/folders
             verbose: Verbosity level
+            strict: If True, exit on permission errors; if False, continue with warnings
         """
         self.scan_strategy = scan_strategy
-        super().__init__(exclusion_filter, verbose)
+        super().__init__(exclusion_filter, verbose, strict)
     
     def _build_adapter_stack(self):
         """Build adapter stack with caching and timestamp calculation."""
-        # Base filesystem adapter
+        # Start with base filesystem adapter
         base = AsyncFileSystemAdapter(
             max_concurrent=50,
             batch_size=256,
             follow_symlinks=False
         )
         
+        # Wrap with error handling using our policy
+        error_handled = ErrorHandlingAdapter(base, self.error_policy)
+        
         # Add depth tracking
-        depth = DepthTrackingAdapter(base)
+        depth = DepthTrackingAdapter(error_handled)
         
         # Add timestamp calculation with exclusion filter
         timestamp = TimestampCalculationAdapter(depth, strategy=self.scan_strategy, 
@@ -132,9 +195,16 @@ class StandardDazzleStrategy(DazzleStrategy):
     def analyze(self, base_path: Path, depths: List[int]) -> List[Tuple[Path, Optional[datetime]]]:
         """Use DazzleTreeLib traversal with caching."""
         async def _analyze():
+            from dazzletreelib.aio.core.depth_traverser import AsyncLevelOrderDepthTraverser
+            from dazzletreelib.aio import AsyncFileSystemNode
+            
             results = []
             processed = set()
             depths_to_process = depths.copy() if depths else []
+            
+            # Create traverser and root node
+            traverser = AsyncLevelOrderDepthTraverser()
+            root_node = AsyncFileSystemNode(base_path)
             
             # Optimize depths if needed
             if depths_to_process and max(depths_to_process) > 20:
@@ -151,16 +221,31 @@ class StandardDazzleStrategy(DazzleStrategy):
                 if self.verbose >= 2:
                     print(f"Scanning at depth {target_depth}...")
                 
-                async for level_depth, nodes in traverse_tree_by_level(base_path, max_depth=target_depth):
+                # Use traverser with our adapter stack (which includes error handling)
+                async for level_depth, nodes in traverser.traverse_by_level(
+                    root_node, self.adapter_stack, max_depth=target_depth
+                ):
                     if level_depth == target_depth:
                         for node in nodes:
-                            if node.path.is_dir() and str(node.path) not in processed:
-                                if not self.exclusion_filter.should_exclude(node.path, is_dir=True):
-                                    # Get timestamp using adapter
-                                    timestamp_adapter = self._get_timestamp_adapter()
-                                    timestamp = await timestamp_adapter.calculate_timestamp(node)
-                                    results.append((node.path, timestamp))
-                                    processed.add(str(node.path))
+                            try:
+                                # Wrap property access in try-except since it bypasses adapters
+                                if not node.path.is_dir():
+                                    continue
+                                if str(node.path) in processed:
+                                    continue
+                                if self.exclusion_filter.should_exclude(node.path, is_dir=True):
+                                    continue
+                                    
+                                # Get timestamp using adapter
+                                timestamp_adapter = self._get_timestamp_adapter()
+                                timestamp = await timestamp_adapter.calculate_timestamp(node)
+                                results.append((node.path, timestamp))
+                                processed.add(str(node.path))
+                            except (PermissionError, OSError) as e:
+                                # Handle permission errors for inaccessible paths
+                                if self.verbose >= 2:
+                                    print(f"WARNING: Skipping inaccessible path '{node.path}': {e}")
+                                continue
                         break
             
             return results
@@ -169,8 +254,16 @@ class StandardDazzleStrategy(DazzleStrategy):
     
     async def _detect_max_depth(self, base_path: Path, limit: int) -> int:
         """Detect maximum depth of tree."""
+        from dazzletreelib.aio.core.depth_traverser import AsyncLevelOrderDepthTraverser
+        from dazzletreelib.aio import AsyncFileSystemNode
+        
         max_depth = 0
-        async for depth, _ in traverse_tree_by_level(base_path, max_depth=limit):
+        traverser = AsyncLevelOrderDepthTraverser()
+        root_node = AsyncFileSystemNode(base_path)
+        
+        async for depth, _ in traverser.traverse_by_level(
+            root_node, self.adapter_stack, max_depth=limit
+        ):
             if depth > max_depth:
                 max_depth = depth
         return max_depth
@@ -203,7 +296,7 @@ class LowMemoryDazzleStrategy(DazzleStrategy):
     
     def __init__(self, scan_strategy: str = 'shallow',
                  exclusion_filter: Optional[ExclusionFilter] = None,
-                 verbose: int = 0):
+                 verbose: int = 0, strict: bool = False):
         """
         Initialize low memory strategy.
         
@@ -211,9 +304,10 @@ class LowMemoryDazzleStrategy(DazzleStrategy):
             scan_strategy: 'shallow', 'deep', or 'smart'
             exclusion_filter: Filter for excluding files/folders
             verbose: Verbosity level
+            strict: If True, exit on permission errors; if False, continue with warnings
         """
         self.scan_strategy = scan_strategy
-        super().__init__(exclusion_filter, verbose)
+        super().__init__(exclusion_filter, verbose, strict)
     
     def _build_adapter_stack(self):
         """Build minimal adapter stack without caching."""
@@ -224,9 +318,12 @@ class LowMemoryDazzleStrategy(DazzleStrategy):
             follow_symlinks=False
         )
         
+        # Wrap with error handling using our policy
+        error_handled = ErrorHandlingAdapter(base, self.error_policy)
+        
         # Add timestamp calculation only (no caching) with exclusion filter
         timestamp = TimestampCalculationAdapter(
-            base, 
+            error_handled, 
             strategy=self.scan_strategy,
             exclusion_filter=self.exclusion_filter
         )
@@ -237,21 +334,38 @@ class LowMemoryDazzleStrategy(DazzleStrategy):
     def analyze(self, base_path: Path, depths: List[int]) -> List[Tuple[Path, Optional[datetime]]]:
         """Process folders with minimal memory usage."""
         async def _analyze():
+            from dazzletreelib.aio.core.depth_traverser import AsyncLevelOrderDepthTraverser
+            from dazzletreelib.aio import AsyncFileSystemNode
+            
             results = []
+            traverser = AsyncLevelOrderDepthTraverser()
+            root_node = AsyncFileSystemNode(base_path)
             
             # Process each depth individually to minimize memory
             for target_depth in sorted(depths):
                 if self.verbose >= 2:
                     print(f"Low-memory: Processing depth {target_depth}...")
                 
-                async for level_depth, nodes in traverse_tree_by_level(base_path, max_depth=target_depth):
+                async for level_depth, nodes in traverser.traverse_by_level(
+                    root_node, self.adapter_stack, max_depth=target_depth
+                ):
                     if level_depth == target_depth:
                         for node in nodes:
-                            if node.path.is_dir():
-                                if not self.exclusion_filter.should_exclude(node.path, is_dir=True):
-                                    # Calculate timestamp immediately and release node
-                                    timestamp = await self.adapter_stack.calculate_timestamp(node)
-                                    results.append((node.path, timestamp))
+                            try:
+                                # Wrap property access in try-except since it bypasses adapters
+                                if not node.path.is_dir():
+                                    continue
+                                if self.exclusion_filter.should_exclude(node.path, is_dir=True):
+                                    continue
+                                    
+                                # Calculate timestamp immediately and release node
+                                timestamp = await self.adapter_stack.calculate_timestamp(node)
+                                results.append((node.path, timestamp))
+                            except (PermissionError, OSError) as e:
+                                # Handle permission errors for inaccessible paths
+                                if self.verbose >= 2:
+                                    print(f"WARNING: Skipping inaccessible path '{node.path}': {e}")
+                                continue
                         break
                 
                 # Force garbage collection between depths
@@ -273,15 +387,16 @@ class TreeDazzleStrategy(DazzleStrategy):
     """Tree structure strategy using DazzleTreeLib's bottom-up traversal."""
     
     def __init__(self, exclusion_filter: Optional[ExclusionFilter] = None,
-                 verbose: int = 0):
+                 verbose: int = 0, strict: bool = False):
         """
         Initialize tree strategy with bottom-up processing.
         
         Args:
             exclusion_filter: Filter for excluding files/folders
             verbose: Verbosity level
+            strict: If True, exit on permission errors; if False, continue with warnings
         """
-        super().__init__(exclusion_filter, verbose)
+        super().__init__(exclusion_filter, verbose, strict)
     
     def _build_adapter_stack(self):
         """Build adapter stack optimized for tree traversal."""
@@ -292,8 +407,11 @@ class TreeDazzleStrategy(DazzleStrategy):
             follow_symlinks=False
         )
         
+        # Wrap with error handling using our policy
+        error_handled = ErrorHandlingAdapter(base, self.error_policy)
+        
         # Add depth tracking for efficient tree operations
-        depth = DepthTrackingAdapter(base)
+        depth = DepthTrackingAdapter(error_handled)
         
         # Add smart timestamp calculation for folders with exclusion filter
         timestamp = TimestampCalculationAdapter(
@@ -329,9 +447,19 @@ class TreeDazzleStrategy(DazzleStrategy):
                 ):
                     if level_depth == target_depth:
                         for node in nodes:
-                            if node.path.is_dir():
-                                if not self.exclusion_filter.should_exclude(node.path, is_dir=True):
-                                    all_folders[str(node.path)] = (node.path, level_depth)
+                            try:
+                                # Wrap property access in try-except since it bypasses adapters
+                                if not node.path.is_dir():
+                                    continue
+                                if self.exclusion_filter.should_exclude(node.path, is_dir=True):
+                                    continue
+                                    
+                                all_folders[str(node.path)] = (node.path, level_depth)
+                            except (PermissionError, OSError) as e:
+                                # Handle permission errors for inaccessible paths
+                                if self.verbose >= 2:
+                                    print(f"WARNING: Skipping inaccessible path '{node.path}': {e}")
+                                continue
                         break
             
             # Second pass: compute timestamps bottom-up
@@ -380,15 +508,16 @@ class FolderOnlyDazzleStrategy(DazzleStrategy):
     """Ultra-minimal mode using DazzleTreeLib - processes files on-the-fly."""
     
     def __init__(self, exclusion_filter: Optional[ExclusionFilter] = None,
-                 verbose: int = 0):
+                 verbose: int = 0, strict: bool = False):
         """
         Initialize folder-only strategy.
         
         Args:
             exclusion_filter: Filter for excluding files/folders
             verbose: Verbosity level
+            strict: If True, exit on permission errors; if False, continue with warnings
         """
-        super().__init__(exclusion_filter, verbose)
+        super().__init__(exclusion_filter, verbose, strict)
     
     def _build_adapter_stack(self):
         """Build adapter stack for folder-only processing."""
@@ -399,9 +528,12 @@ class FolderOnlyDazzleStrategy(DazzleStrategy):
             follow_symlinks=False
         )
         
+        # Wrap with error handling using our policy
+        error_handled = ErrorHandlingAdapter(base, self.error_policy)
+        
         # Add shallow timestamp calculation (folder-only) with exclusion filter
         timestamp = TimestampCalculationAdapter(
-            base, 
+            error_handled, 
             strategy='shallow',
             exclusion_filter=self.exclusion_filter
         )
@@ -442,17 +574,27 @@ class FolderOnlyDazzleStrategy(DazzleStrategy):
             ):
                 if level_depth in depth_set:
                     for node in nodes:
-                        if node.path.is_dir():
-                            if not self.exclusion_filter.should_exclude(node.path, is_dir=True):
-                                # Get timestamp from our timestamp adapter
-                                timestamp_adapter = self._get_timestamp_adapter()
-                                if timestamp_adapter:
-                                    timestamp = await timestamp_adapter.calculate_timestamp(node)
-                                else:
-                                    # Fallback - should not happen
-                                    timestamp = datetime.fromtimestamp(node.path.stat().st_mtime)
+                        try:
+                            # Wrap property access in try-except since it bypasses adapters
+                            if not node.path.is_dir():
+                                continue
+                            if self.exclusion_filter.should_exclude(node.path, is_dir=True):
+                                continue
                                 
-                                results.append((node.path, timestamp))
+                            # Get timestamp from our timestamp adapter
+                            timestamp_adapter = self._get_timestamp_adapter()
+                            if timestamp_adapter:
+                                timestamp = await timestamp_adapter.calculate_timestamp(node)
+                            else:
+                                # Fallback - should not happen
+                                timestamp = datetime.fromtimestamp(node.path.stat().st_mtime)
+                            
+                            results.append((node.path, timestamp))
+                        except (PermissionError, OSError) as e:
+                            # Handle permission errors for inaccessible paths
+                            if self.verbose >= 2:
+                                print(f"WARNING: Skipping inaccessible path '{node.path}': {e}")
+                            continue
                 
                 # Stop if we've processed all requested depths
                 if level_depth >= max_depth:
@@ -487,7 +629,7 @@ class FolderOnlyDazzleStrategy(DazzleStrategy):
 # Factory function for creating strategies
 def create_strategy(strategy_type: str, scan_strategy: str = 'shallow',
                    exclusion_filter: Optional[ExclusionFilter] = None,
-                   verbose: int = 0) -> DazzleStrategy:
+                   verbose: int = 0, strict: bool = False) -> DazzleStrategy:
     """
     Create a DazzleTreeLib strategy instance.
     
@@ -496,21 +638,22 @@ def create_strategy(strategy_type: str, scan_strategy: str = 'shallow',
         scan_strategy: 'shallow', 'deep', or 'smart' (for applicable strategies)
         exclusion_filter: Filter for excluding files/folders
         verbose: Verbosity level
+        strict: If True, exit on permission errors; if False, continue with warnings
     
     Returns:
         Strategy instance
     """
     if strategy_type == 'standard':
-        return StandardDazzleStrategy(scan_strategy, exclusion_filter, verbose)
+        return StandardDazzleStrategy(scan_strategy, exclusion_filter, verbose, strict)
     elif strategy_type == 'low-memory':
-        return LowMemoryDazzleStrategy(scan_strategy, exclusion_filter, verbose)
+        return LowMemoryDazzleStrategy(scan_strategy, exclusion_filter, verbose, strict)
     elif strategy_type == 'tree':
-        return TreeDazzleStrategy(exclusion_filter, verbose)
+        return TreeDazzleStrategy(exclusion_filter, verbose, strict)
     elif strategy_type == 'folder-only':
-        return FolderOnlyDazzleStrategy(exclusion_filter, verbose)
+        return FolderOnlyDazzleStrategy(exclusion_filter, verbose, strict)
     else:
         # Default to standard
-        return StandardDazzleStrategy(scan_strategy, exclusion_filter, verbose)
+        return StandardDazzleStrategy(scan_strategy, exclusion_filter, verbose, strict)
 
 
 # Backward compatibility aliases
@@ -527,7 +670,7 @@ class StrategyFactory:
     """Factory for creating analysis strategies - DazzleTreeLib version."""
     
     @staticmethod
-    def create_strategy(analyze_param: str, scanner, scan_strategy: str = 'shallow') -> DazzleStrategy:
+    def create_strategy(analyze_param: str, scanner, scan_strategy: str = 'shallow', strict: bool = False) -> DazzleStrategy:
         """
         Create an analysis strategy from parameter string.
         
@@ -536,6 +679,7 @@ class StrategyFactory:
                 Examples: 'auto', 'auto=2.0', 'standard,no-cache', 'low-memory'
             scanner: FolderScanner instance (for compatibility - gets exclusion filter)
             scan_strategy: Scan strategy ('shallow', 'deep', 'smart')
+            strict: If True, exit on permission errors; if False, continue with warnings
         
         Returns:
             DazzleStrategy instance
@@ -565,22 +709,22 @@ class StrategyFactory:
         
         # Create base strategy
         if primary == 'tree':
-            strategy = TreeDazzleStrategy(exclusion_filter, verbose)
+            strategy = TreeDazzleStrategy(exclusion_filter, verbose, strict)
         elif primary == 'folder-only' or primary == 'folders':
-            strategy = FolderOnlyDazzleStrategy(exclusion_filter, verbose)
+            strategy = FolderOnlyDazzleStrategy(exclusion_filter, verbose, strict)
         elif primary == 'low-memory' or force_low_memory:
-            strategy = LowMemoryDazzleStrategy(scan_strategy, exclusion_filter, verbose)
+            strategy = LowMemoryDazzleStrategy(scan_strategy, exclusion_filter, verbose, strict)
         elif primary == 'auto':
             # Check if low-memory modifier is present
             if force_low_memory:
-                strategy = LowMemoryDazzleStrategy(scan_strategy, exclusion_filter, verbose)
+                strategy = LowMemoryDazzleStrategy(scan_strategy, exclusion_filter, verbose, strict)
             else:
                 # Auto strategy: use standard for now (could be smarter)
                 # TODO: Implement proper auto-selection based on file count
-                strategy = StandardDazzleStrategy(scan_strategy, exclusion_filter, verbose)
+                strategy = StandardDazzleStrategy(scan_strategy, exclusion_filter, verbose, strict)
         else:
             # Default to standard
-            strategy = StandardDazzleStrategy(scan_strategy, exclusion_filter, verbose)
+            strategy = StandardDazzleStrategy(scan_strategy, exclusion_filter, verbose, strict)
         
         return strategy
     

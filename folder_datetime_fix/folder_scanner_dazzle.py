@@ -144,10 +144,16 @@ class DazzleTreeScanner:
             async for level_depth, nodes in traverse_tree_by_level(base_path, max_depth=depth):
                 if level_depth == depth:
                     for node in nodes:
-                        if node.path.is_dir():
-                            # Check exclusion filter
-                            if not self.exclusion_filter.should_exclude(node.path, is_dir=True):
-                                folders.append(node.path)
+                        try:
+                            if not node.path.is_dir():
+                                continue
+                        except (PermissionError, OSError) as e:
+                            # Skip inaccessible paths
+                            continue
+                            
+                        # Check exclusion filter
+                        if not self.exclusion_filter.should_exclude(node.path, is_dir=True):
+                            folders.append(node.path)
                     break
             
             return sorted(folders)
@@ -264,7 +270,14 @@ class DazzleTreeScanner:
                 async for level_depth, nodes in traverse_tree_by_level(base_path, max_depth=target_depth):
                     if level_depth == target_depth:
                         for node in nodes:
-                            if node.path.is_dir() and str(node.path) not in processed:
+                            try:
+                                if not node.path.is_dir():
+                                    continue
+                            except (PermissionError, OSError) as e:
+                                # Skip inaccessible paths
+                                continue
+                                
+                            if str(node.path) not in processed:
                                 # Check exclusion filter
                                 if not self.exclusion_filter.should_exclude(node.path, is_dir=True):
                                     # Calculate timestamp

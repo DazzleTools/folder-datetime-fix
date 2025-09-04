@@ -258,6 +258,10 @@ def create_parser(show_full_help=False, show_brief_help=False):
                        metavar='FILE',
                        help='Save detailed report to file')
     
+    parser.add_argument('--strict',
+                       action='store_true',
+                       help='Exit immediately on permission errors (default: continue with warnings)')
+    
     # Performance limits
     parser.add_argument('--max-depth', '-m',
                        type=int,
@@ -383,6 +387,9 @@ def print_summary(stats: dict, verbose: bool = False):
     print(f"Folders changed:       {stats['folders_changed']}")
     print(f"Folders skipped:       {stats['folders_skipped']}")
     print(f"Empty folders:         {stats['empty_folders']}")
+    
+    if stats.get('folders_skipped_permission', 0) > 0:
+        print(f"Permission denied:     {stats['folders_skipped_permission']} [WARNING]")
     
     if stats['folders_error'] > 0:
         print(f"Folders with errors:   {stats['folders_error']} [WARNING]")
@@ -533,7 +540,8 @@ def main():
     analysis_strategy = StrategyFactory.create_strategy(
         args.analyze,
         scanner,
-        args.strategy
+        args.strategy,
+        strict=args.strict
     )
     
     # If verbose, show analysis strategy info
@@ -586,6 +594,7 @@ def main():
             print()
         
         # Process folders with analysis strategy
+        # The strategy now handles permission errors internally based on the strict flag
         analysis_results = analysis_strategy.analyze(target_path, args.depths)
         
         if not args.quiet:
