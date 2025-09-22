@@ -22,6 +22,13 @@ from dazzletreelib.aio import (
     traverse_tree_by_level,
     process_folders_bottom_up,
 )
+
+# Try to import the new SmartCachingAdapter
+try:
+    from dazzletreelib.aio.adapters.smart_caching import SmartCachingAdapter
+    SMART_ADAPTER_AVAILABLE = True
+except ImportError:
+    SMART_ADAPTER_AVAILABLE = False
 from .trace_utils import trace
 from .exclusion_filter import ExclusionFilter
 
@@ -31,6 +38,24 @@ from dazzletreelib.aio import (
     FailFastPolicy,
     ContinueOnErrorsPolicy,
 )
+
+
+def create_cache_adapter(base_adapter, max_memory_mb=100):
+    """
+    Create a cache adapter using the best available implementation.
+
+    Prefers SmartCachingAdapter if available for better semantic tracking.
+    """
+    if SMART_ADAPTER_AVAILABLE:
+        # Use the new SmartCachingAdapter with clear semantics
+        return SmartCachingAdapter(
+            base_adapter=base_adapter,
+            max_memory_mb=max_memory_mb,
+            track_traversal=True  # Enable discovery/expansion tracking
+        )
+    else:
+        # Fallback to traditional adapter
+        return CompletenessAwareCacheAdapter(base_adapter, max_memory_mb=max_memory_mb)
 
 
 class DazzleStrategy(ABC):
@@ -187,8 +212,8 @@ class StandardDazzleStrategy(DazzleStrategy):
                                                exclusion_filter=self.exclusion_filter)
         
         # Add cache completeness tracking
-        cache = CompletenessAwareCacheAdapter(timestamp, max_memory_mb=100)
-        
+        cache = create_cache_adapter(timestamp, max_memory_mb=100)
+
         return cache
     
     @trace
@@ -421,8 +446,8 @@ class TreeDazzleStrategy(DazzleStrategy):
         )
         
         # Add caching with completeness tracking for tree mode
-        cache = CompletenessAwareCacheAdapter(timestamp, max_memory_mb=50)
-        
+        cache = create_cache_adapter(timestamp, max_memory_mb=50)
+
         return cache
     
     @trace
@@ -539,8 +564,8 @@ class FolderOnlyDazzleStrategy(DazzleStrategy):
         )
         
         # Add lightweight caching
-        cache = CompletenessAwareCacheAdapter(timestamp, max_memory_mb=25)
-        
+        cache = create_cache_adapter(timestamp, max_memory_mb=25)
+
         return cache
     
     @trace

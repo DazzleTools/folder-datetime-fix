@@ -7,7 +7,7 @@ from pathlib import Path
 import time
 import os
 
-from folder_datetime_fix.cache import (
+from folder_datetime_fix.cache_wrapper import (
     CacheCompleteness, 
     SmartCacheEntry,
     SmartStreamingCache

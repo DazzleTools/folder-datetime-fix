@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
-"""Calculate actual memory usage for cache entries."""
+"""Calculate actual memory usage for cache entries.
+
+Related to Issue #17: Memory profiling for the new integer-based cache design.
+Verifies that replacing enums with integers doesn't significantly impact memory.
+"""
 
 import sys
 import os
 sys.path.insert(0, os.path.abspath('../..'))
 
-from folder_datetime_fix.cache import SmartCacheEntry, CacheCompleteness
+from folder_datetime_fix.cache_wrapper import SmartCacheEntry, CacheCompleteness
 from pathlib import Path
 
 # Create a sample entry with correct parameters

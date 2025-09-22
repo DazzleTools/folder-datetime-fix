@@ -27,7 +27,8 @@ setup(
         ],
     },
     install_requires=[
-        # No external dependencies for core functionality
+        # DazzleTreeLib for improved cache with integer-based depth tracking
+        "dazzletreelib>=0.1.0",
         # unctools will be added later for enhanced UNC support
     ],
     extras_require={
