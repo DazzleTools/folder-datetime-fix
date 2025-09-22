@@ -7,7 +7,7 @@ name = "folder-datetime-fix"
 dynamic = ["version"]
 description = "Fix folder timestamps corrupted by system files like thumbs.db on Windows"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 license = {text = "GPL-3.0-or-later"}
 authors = [
     {name = "Dustin Darcy", email = "6962246+djdarcy@users.noreply.github.com"},
@@ -30,7 +30,6 @@ classifiers = [
     "Topic :: System :: Filesystems",
     "Topic :: Utilities",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",

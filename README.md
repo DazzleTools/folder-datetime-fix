@@ -1,8 +1,9 @@
 # Folder DateTime Fix
 
-[![Python](https://img.shields.io/badge/python-%3E%3D3.7-darkgreen)](https://python.org/downloads)
-[![License](https://img.shields.io/badge/license-MIT-orange)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-blue)](https://github.com/djdarcy/modified_datetime_fix/releases)
+[![Version](https://img.shields.io/github/v/release/djdarcy/folder-datetime-fix?sort=semver&color=blue)](https://github.com/djdarcy/folder-datetime-fix/releases)
+[![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-GPL--3.0-green)](https://github.com/djdarcy/folder-datetime-fix/blob/main/LICENSE)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)]()
 
 **Fix folder timestamps corrupted by system files like thumbs.db on Windows**
 
