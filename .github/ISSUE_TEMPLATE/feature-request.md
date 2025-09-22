@@ -3,7 +3,7 @@ name: Feature request
 about: Suggest an idea for modified_datetime_fix
 title: "[FEATURE] "
 labels: enhancement
-assignees: ''
+assignees: 'djdarcy'
 ---
 
 **Is your feature request related to a problem? Please describe.**

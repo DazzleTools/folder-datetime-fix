@@ -1,0 +1,57 @@
+{
+  "timestamp": "2025-09-02T02:47:19.954467",
+  "tests": {
+    "exit_code": 4,
+    "stdout": ""
+  },
+  "performance": {
+    "shallow_time": 0.22139409999363124,
+    "shallow_success": true,
+    "deep_time": 0.23447830008808523,
+    "deep_success": true,
+    "smart_time": 0.2255946999648586,
+    "smart_success": true
+  },
+  "functionality": {
+    "Help display": {
+      "exit_code": 0,
+      "success": true
+    },
+    "Version display": {
+      "exit_code": 0,
+      "success": true
+    },
+    "Dry run": {
+      "exit_code": 0,
+      "success": true
+    },
+    "Shallow strategy": {
+      "exit_code": 0,
+      "success": true
+    },
+    "Deep strategy": {
+      "exit_code": 0,
+      "success": true
+    },
+    "Smart strategy": {
+      "exit_code": 0,
+      "success": true
+    },
+    "Standard analysis": {
+      "exit_code": 0,
+      "success": true
+    },
+    "Low-memory analysis": {
+      "exit_code": 0,
+      "success": true
+    },
+    "Tree analysis": {
+      "exit_code": 0,
+      "success": true
+    },
+    "Folder-only analysis": {
+      "exit_code": 0,
+      "success": true
+    }
+  }
+}

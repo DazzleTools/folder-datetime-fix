@@ -144,10 +144,17 @@ credentials.json
 .env.private
 **/private_*
 CLAUDE.md
-test-runs/
 private/claude/
 private/notes/
 private/temp/
 private/docs/
-test_runs/
 revisions/
+
+# Test directories
+tests/test_structure/
+test_runs/
+test-runs/
+
+# Python tools
+.mypy_cache/
+.ruff_cache/
