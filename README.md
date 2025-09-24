@@ -5,7 +5,7 @@
 [![Tests](https://github.com/djdarcy/folder-datetime-fix/actions/workflows/main.yml/badge.svg)](https://github.com/djdarcy/folder-datetime-fix/actions)
 [![License](https://img.shields.io/badge/license-GPL--3.0-green)](https://github.com/djdarcy/folder-datetime-fix/blob/main/LICENSE)
 
-Folder-Datetime-Fix restores accurate folder dates by removing common corruptions created by background features from Windows system files, like thumbs.db, and beyond.
+Folder-Datetime-Fix restores accurate folder dates by removing common corruptions created by background features from Operating System tools and files, like thumbs.db, and beyond.
 
 [Quick Start](#quick-start) • [Installation](#installation) • [Documentation](docs/) • [Report Issue](https://github.com/djdarcy/folder-datetime-fix/issues)
 
