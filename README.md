@@ -2,33 +2,46 @@
 
 [![Version](https://img.shields.io/github/v/release/djdarcy/folder-datetime-fix?sort=semver&color=blue)](https://github.com/djdarcy/folder-datetime-fix/releases)
 [![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
+[![Tests](https://github.com/djdarcy/folder-datetime-fix/actions/workflows/main.yml/badge.svg)](https://github.com/djdarcy/folder-datetime-fix/actions)
 [![License](https://img.shields.io/badge/license-GPL--3.0-green)](https://github.com/djdarcy/folder-datetime-fix/blob/main/LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)]()
 
-**Fix folder timestamps corrupted by system files like thumbs.db on Windows**
+Folder-Datetime-Fix restores accurate folder dates by removing common corruptions created by background features from Windows system files, like thumbs.db, and beyond.
 
-A Python CLI tool that restores accurate folder modified timestamps based on actual user file modifications, solving the Windows issue where system-generated files corrupt folder modified date times and break chronological sorting.
+[Quick Start](#quick-start) • [Installation](#installation) • [Documentation](docs/) • [Report Issue](https://github.com/djdarcy/folder-datetime-fix/issues)
 
 ## The Problem
 
-When browsing folders in Windows Explorer, it often creates hidden system files like `thumbs.db` and `desktop.ini`. These types of generated files update the folder's modified timestamp, making folders appear recently changed even when they haven't been touched in potentially months. This default Windows behavior frustratingly breaks the ability to sort folders by actual modification date to find recent work.
+Windows Explorer creates hidden files (`thumbs.db`, `desktop.ini`) that corrupt your folder timestamps:
 
-**Before**: Project folder shows "Modified: Today" because of thumbs.db  
-**After**: Project folder shows "Modified: Oct 2024" when you actually worked on it
+| Before                                        | After Fix                                    |
+| --------------------------------------------- | -------------------------------------------- |
+| 📁 "2019 Projects" → Modified: **Today** ❌     | 📁 "2019 Projects" → Modified: **Dec 2019** ✅ |
+| 📁 "Old Photos" → Modified: **Yesterday**❌     | 📁 "Old Photos" → Modified: **Jun 2018** ✅    |
+| 📁 "Archived Work" → Modified: **Last week** ❌ | 📁 "Archived Work" → Modified: **Mar 2020** ✅ |
 
-## Features
+This breaks chronological sorting and makes it difficult to find your actual recent work.
 
-- **Depth-based processing**: Fix folders at specific depth levels from a base path
-- **Multiple strategies**: Choose shallow (immediate children), deep (entire subtree), or smart (automatic)
-- **System file exclusion**: Automatically skips thumbs.db, desktop.ini, .DS_Store by default
-- **UNC path support**: Works with network shares and mapped drives
-- **Dry-run mode**: Preview changes before applying them
-- **Detailed reporting**: Verbose output and change logs
-- **Parent folder propagation**: Updates intermediate folders when fixing deep structures
+## Quick Start
+
+Fix your folders in 3 simple steps:
+
+```bash
+# 1. Install
+pip install folder-datetime-fix
+
+# 2. Preview changes (always do this first!)
+cd \your\project\folder
+folder-datetime-fix . --fix-all --dry-run
+
+# 3. Apply the fix
+folder-datetime-fix . --fix-all
+```
+
+That's it! Your folders now show their real modification dates. 
 
 ## Installation
 
-### From PyPI (Coming Soon)
+### From PyPI (Recommended)
 
 ```bash
 pip install folder-datetime-fix
@@ -37,222 +50,197 @@ pip install folder-datetime-fix
 ### From Source
 
 ```bash
-# Clone the repository
-git clone https://github.com/djdarcy/modified_datetime_fix.git
-cd modified_datetime_fix
-
-# Install in development mode
+git clone https://github.com/djdarcy/folder-datetime-fix.git
+cd folder-datetime-fix
 pip install -e .
-
-# Or install normally
-pip install .
 ```
 
-### Usage After Installation
+## Common Use Cases
+
+### Fix Everything (Most Common)
+
+Fix all folders recursively, skipping system files automatically:
 
 ```bash
-# Run as installed command
-folder-datetime-fix --help
+# Fix entire C: drive (preview first)
+folder-datetime-fix C:\ --fix-all --dry-run
+folder-datetime-fix C:\ --fix-all
 
-# Or run as Python module
-python -m folder_datetime_fix --help
-
-# Legacy command (backward compatibility)
-mod_fldr_dt --help
+# Fix current directory and everything below
+folder-datetime-fix . --fix-all
 ```
 
-## Quick Start
+### Fix Specific Folder
 
-### Fix a single folder
+Fix just one folder without affecting subfolders:
+
 ```bash
-# Preview what would change first (ALWAYS recommended)
-folder-datetime-fix C:\Projects --depth 0 --dry-run -v
-
-# Apply the fix after reviewing
-folder-datetime-fix C:\Projects --depth 0
-
-# Include system files in timestamp calculation (not recommended)
-folder-datetime-fix C:\Projects --depth 0 --include-generated
+folder-datetime-fix "C:\Projects" --depth 0
 ```
 
-### Fix all subfolders
+### Fix Folder + Immediate Children
+
+Fix a folder and its immediate subfolders (great for deep project directories especially on network shares):
+
 ```bash
-# Preview fixes for immediate subfolders
-folder-datetime-fix C:\Projects --depth 1 --dry-run -v
+# Using the convenient alias
+folder-datetime-fix "C:\Projects" --fix-2
 
-# Fix with deep scanning (looks at entire subtree)
-folder-datetime-fix C:\Projects --depth 1 --strategy deep
+# Or explicitly
+folder-datetime-fix "C:\Projects" --depth 0 --depth 1 --strategy deep
 ```
 
-### Convenience shortcuts
+### Network Drives
+
+Fix timestamps on network shares and UNC paths:
+
 ```bash
-# Preview fixes for folder and immediate children
-folder-datetime-fix C:\Projects --fix-2 --dry-run -v
+# UNC path (use quotes for backslashes)
+folder-datetime-fix --unc-path "\\server\share\projects" --fix-all --dry-run
 
-# Fix entire tree recursively (use with caution on large trees)
-folder-datetime-fix C:\Projects --fix-all --dry-run -v
-
-# Fix only immediate subfolders
-folder-datetime-fix C:\Projects --fix-immediate
+# Or use forward slashes
+folder-datetime-fix //server/share/projects --fix-all
 ```
 
-### Network paths
-```bash
-# UNC paths - preview with progress (recommended to start with --dry-run)
-folder-datetime-fix //server/share/projects --fix-all --dry-run -v
+## How It Works
 
-# UNC paths - use --unc-path for easy copy-paste from Windows
-folder-datetime-fix --unc-path "\\server\share\projects" --fix-all --dry-run -v
+The tool recalculates folder timestamps based on the actual content, excluding system-generated files:
 
-# Works with mapped drives
-folder-datetime-fix Z:\team-projects --depth 1 -v
+1. **Scans** your folder structure at specified depths
+2. **Analyzes** the real content (your files) vs system files
+3. **Calculates** what the folder date should be
+4. **Updates** the folder timestamp to match the newest actual content
 
-# Note: Single backslash paths like \server\share are ambiguous and will show a warning
-```
+### System Files Automatically Skipped
 
-## Command Line Options
-
-| Option | Short | Description |
-|--------|-------|-------------|
-| `--version` | `-V` | Show version information |
-| `--depth N` | `-d N` | Process folders at depth N (can be specified multiple times) |
-| `--strategy` | `-s` | Timestamp calculation strategy: shallow, deep, or smart |
-| `--include-generated` | `-ig` | Include system-generated files (normally skipped) |
-| `--dry-run` | `-n` | Preview changes without applying them |
-| `--verbose` | `-v` | Increase verbosity (-v=basic, -vv=detailed, -vvv=debug, -vvvv=trace) |
-| `--quiet` | `-q` | Suppress output except errors |
-| `--report FILE` | `-r FILE` | Save detailed report to file |
-| `--fix-2` | | Convenience: Fix folder and immediate children |
-| `--fix-all` | | Convenience: Fix entire tree recursively |
-| `--fix-immediate` | | Convenience: Fix immediate subfolders only |
+By default, these system files are ignored when calculating dates:
+- `thumbs.db`, `desktop.ini` (Windows)
+- `.DS_Store` (macOS)
+- `$RECYCLE.BIN`, `System Volume Information`
+- Other [system-generated files](docs/Exclude-Include-Patterns.md)
 
 ## Understanding Depth Levels
 
+Depth controls which folders get fixed:
+
 ```
-C:\Projects\              <- depth 0
-├── ProjectA\            <- depth 1
+C:\Projects\            <- depth 0 (the root)
+├── ProjectA\           <- depth 1
 │   ├── src\            <- depth 2
 │   └── docs\           <- depth 2
-└── ProjectB\            <- depth 1
+└── ProjectB\           <- depth 1
     └── data\           <- depth 2
 ```
 
-- `--depth 0`: Fixes C:\Projects itself
-- `--depth 1`: Fixes ProjectA and ProjectB
-- `--depth 0 --depth 1`: Fixes all three folders at depths 0 and 1
+Common depth patterns:
+- `--depth 0` - Just the target folder
+- `--depth 1` - Just immediate subfolders
+- `--fix-2` - Target + immediate children (depth 0 and 1)
+- `--fix-all` - Everything recursively
 
-## Understanding Strategies
+## Command Line Options
 
-- **shallow**: Sets folder timestamp based on immediate children only
-- **deep**: Sets folder timestamp based on newest file in entire subtree
-- **smart**: Automatically chooses based on folder structure
+### Important Options
 
-## System Files Handling
+| Option | Description |
+|--------|-------------|
+| `--fix-all`, `-fa` | Fix entire tree recursively (most common) |
+| `--fix-2`, `-f2` | Fix folder + immediate children |
+| `--dry-run`, `-n` | Preview changes without applying |
+| `--verbose`, `-v` | Show progress details (use `-vv` for more) |
 
-By default, system-generated files are automatically excluded from timestamp calculations. Use `--include-generated` if you need to include them.
+### Advanced Options
 
-System files automatically skipped:
+| Option | Description |
+|--------|-------------|
+| `--depth N` | Process specific depth level |
+| `--strategy {shallow,deep,smart}` | How to scan folders |
+| `--exclude PATTERNS` | Skip specific patterns |
+| `--include PATTERNS` | Include normally-skipped items |
+| `--analyze {auto,tree,low-memory}` | Memory/performance tradeoffs |
 
-- Windows: `thumbs.db`, `desktop.ini`, `IconCache.db`
-- macOS: `.DS_Store`, `.localized`, `._*` files
-- Cloud sync: `.dropbox`, `.dropbox.cache`
-- IDEs: `.vscode/settings.json`, `.idea/`, `.vs/`
-- Version control: `.git/index`, `.svn/entries`
-- Package managers: `node_modules/.cache/`, `__pycache__/`
-
-## Version Information
-
-Check the current version with build metadata:
-
-```bash
-folder-datetime-fix --version
-folder-datetime-fix -V
-# Output: folder-datetime-fix 0.5.1_branch_build-20250828-commithash
-```
-
-The version format includes:
-- Semantic version (MAJOR.MINOR.PATCH)
-- Git branch name
-- Build number (commit count)
-- Date (YYYYMMDD)
-- Short commit hash
-
-## Verbose Mode
-
-The tool provides progressive verbosity levels for debugging and monitoring:
-
-- **`-v`** (basic): Shows folders being processed and basic progress
-- **`-vv`** (detailed): Shows each folder's changes, skipped folders, and timestamps
-- **`-vvv`** (debug): Shows scanning strategy, folder discovery at each depth, and progress counters
-- **`-vvvv`** (trace): Shows complete function call trace with arguments and return values
-
-Example usage:
-```bash
-# See basic progress
-folder-datetime-fix C:\Projects --fix-2 --dry-run -v
-
-# Debug why a folder isn't being fixed
-folder-datetime-fix C:\Projects --depth 1 --dry-run -vvv
-
-# Full trace for troubleshooting
-folder-datetime-fix C:\Projects --depth 0 --dry-run -vvvv
-```
+See full options with `folder-datetime-fix --help`
 
 ## Examples
 
-### Real-world scenario
-```bash
-# Your project folders are showing wrong dates because of thumbs.db
-# This will fix all project folders to show actual last modification dates
-folder-datetime-fix "C:\Users\YourName\Documents\Projects" --fix-2
-
-# Check what would be fixed first (always recommended)
-folder-datetime-fix "C:\Users\YourName\Documents\Projects" --fix-2 --dry-run -v
-```
-
-### Network share cleanup
-```bash
-# Fix team folders on network share, save report
-folder-datetime-fix --unc-path "\\fileserver\team\projects" --depth 1 --strategy deep --report "fixes.txt"
-```
-
-### Recursive fix with max depth
-```bash
-# Fix everything up to 3 levels deep
-folder-datetime-fix C:\Work --fix-all --max-depth 3
-```
-
-## Development
-
-### Running Tests
+### Preview Everything First (Recommended Workflow)
 
 ```bash
-# Run test suite
-python tests/test_mod_fldr_dt.py
+# Always preview changes before applying
+folder-datetime-fix "C:\Important" --fix-all --dry-run --verbose
 
-# Create test structure for manual testing
-python tests/create_test_structure.py
+# Review the output, then apply if it looks good
+folder-datetime-fix "C:\Important" --fix-all --verbose
 ```
 
-### Project Structure
+### Fix Photos Folder
 
+```bash
+# Quick scan - just looks at immediate files
+folder-datetime-fix "C:\Photos" --fix-all --strategy shallow
+
+# Or deep scan - checks all nested folders for accuracy
+folder-datetime-fix "C:\Photos" --fix-all --strategy deep
 ```
-modified_datetime_fix/
-├── folder_datetime_fix/      # Main package
-│   ├── __init__.py          # Package initialization
-│   ├── __main__.py          # Module entry point
-│   ├── cli.py               # Main CLI interface
-│   ├── folder_scanner.py    # Directory traversal and timestamp logic
-│   ├── timestamp_fixer.py   # Timestamp modification logic
-│   ├── system_files.py      # System file detection patterns
-│   ├── unc_handler.py       # UNC path handling
-│   ├── trace_utils.py       # Debug tracing utilities
-│   └── version.py           # Version information
-├── tests/                   # Test suite
-├── docs/                    # Additional documentation
-├── scripts/                 # Utility scripts
-└── setup.py                 # Package configuration
+
+### Fix Development Projects
+
+```bash
+# Fix all your git repositories
+folder-datetime-fix "C:\Code" --fix-all --include ".git"
+
+# Exclude build artifacts
+folder-datetime-fix "C:\Projects" --fix-all --exclude "node_modules,*.cache,dist"
 ```
+
+### Large Network Shares
+
+```bash
+# Use low-memory mode for millions of files
+folder-datetime-fix //server/archive --fix-all --analyze low-memory --dry-run
+```
+
+## Troubleshooting
+
+### Nothing seems to change?
+
+System files might be newer than your content:
+```bash
+# Check what's happening with verbose mode
+folder-datetime-fix . --fix-2 -vv
+```
+
+### Permission errors?
+
+Run as Administrator or use `--strict` to stop on errors:
+```bash
+# Windows: Run as Administrator
+# Or continue past errors (default behavior)
+folder-datetime-fix C:\ --fix-all
+
+# Or stop immediately on any error
+folder-datetime-fix C:\ --fix-all --strict
+```
+
+### Need more details?
+
+- See [Troubleshooting Guide](docs/troubleshooting.md) for verbose mode and debugging
+- See [Analysis Strategies](docs/Analyze-Strategies.md) for performance tuning
+- See [Recipes and Examples](docs/Recipes-and-Examples.md) for more scenarios
+
+
+## Support
+
+- [Report Issues](https://github.com/djdarcy/folder-datetime-fix/issues)
+- [Discussions](https://github.com/djdarcy/folder-datetime-fix/discussions)
+
+## Documentation
+
+- [Full Documentation](docs/)
+- [Analysis Strategies Guide](docs/Analyze-Strategies.md) - Memory and performance options
+- [Architecture Overview](docs/Architecture-Overview.md) - How it works internally
+- [Exclude/Include Patterns](docs/Exclude-Include-Patterns.md) - Fine-grained control
+- [Recipes and Examples](docs/Recipes-and-Examples.md) - Real-world scenarios
 
 ## Contributing
 
@@ -264,8 +252,4 @@ Like the project?
 
 ## License
 
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
-
-## Author
-
-Copyright (C) 2025 Dustin Darcy - [ScarcityHypothesis.org](https://ScarcityHypothesis.org)
+This project is licensed under the GPL-3.0 License - see the [LICENSE](LICENSE) file for details.
