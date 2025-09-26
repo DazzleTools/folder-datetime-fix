@@ -26,7 +26,8 @@ This breaks chronological sorting and makes it difficult to find your actual rec
 Fix your folders in 3 simple steps:
 
 ```bash
-# 1. Install (for now the process is manual since the packages aren't on PyPI yet and dazzle-tree-lib is a dependency)
+# 1. Install (for now the process is manual since the packages aren't on PyPI yet)
+#    Note: dazzle-tree-lib is a dependency
 git clone https://github.com/djdarcy/dazzle-tree-lib.git
 cd dazzle-tree-lib
 pip install -e .
