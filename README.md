@@ -26,8 +26,16 @@ This breaks chronological sorting and makes it difficult to find your actual rec
 Fix your folders in 3 simple steps:
 
 ```bash
-# 1. Install
-pip install folder-datetime-fix
+# 1. Install (for now the process is manual since the packages aren't on PyPI yet and dazzle-tree-lib is a dependency)
+git clone https://github.com/djdarcy/dazzle-tree-lib.git
+cd dazzle-tree-lib
+pip install -e .
+
+cd ..
+git clone https://github.com/djdarcy/folder-datetime-fix.git
+cd folder-datetime-fix
+pip install -r requirements.txt
+pip install -e .
 
 # 2. Preview changes (always do this first!)
 cd \your\project\folder
@@ -41,7 +49,7 @@ That's it! Your folders now show their real modification dates.
 
 ## Installation
 
-### From PyPI (Recommended)
+### From PyPI (Recommended when available)
 
 ```bash
 pip install folder-datetime-fix
