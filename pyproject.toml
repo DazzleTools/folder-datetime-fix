@@ -54,7 +54,7 @@ mod_fldr_dt = "folder_datetime_fix.cli:main"
 dev = [
     "pytest>=7.0.0",
     "black>=23.0.0",
-    "flake8>=6.0.0",
+    "flake8>=7.3.0",
     "mypy>=1.0.0",
 ]
 unc = [
