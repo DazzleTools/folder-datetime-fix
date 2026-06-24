@@ -61,6 +61,11 @@ mod_fldr_dt = "folder_datetime_fix.cli:main"
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
+    # Required by the async tests (test_permission_error_handling and the
+    # dazzletreelib.aio integration tests). It was previously only present
+    # ambiently in dev environments, so CI -- which installs only what [dev]
+    # declares -- failed with "async def functions are not natively supported".
+    "pytest-asyncio>=0.21.0",
     "black>=23.0.0",
     "flake8>=6.0.0",
     "mypy>=1.0.0",

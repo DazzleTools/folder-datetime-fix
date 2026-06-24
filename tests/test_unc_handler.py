@@ -51,11 +51,18 @@ class TestUNCHandler(unittest.TestCase):
         with patch('folder_datetime_fix.unc_handler.UNCTOOLS_AVAILABLE', False):
             handler = UNCHandler()
             
-            # UNC paths should be preserved (Windows may add trailing slash)
+            # UNC paths should be preserved (Windows may add trailing slash).
+            # The backslash UNC form (\\server\share) is only meaningful on
+            # Windows; on POSIX it is not an absolute path, so the cross-platform
+            # normalizer absolutizes it against cwd (filekit paths.py). Assert the
+            # strong backslash-prefix form on Windows, and the weaker
+            # share-identity invariant on POSIX.
             unc_path = '\\\\server\\share'
             result = handler.normalize_path(unc_path)
-            # Path may have trailing slash on Windows
-            self.assertTrue(str(result).startswith(unc_path))
+            if sys.platform == 'win32':
+                self.assertTrue(str(result).startswith(unc_path))
+            else:
+                self.assertTrue('server' in str(result) and 'share' in str(result))
             
             # Forward slash UNC (Windows converts to backslash)
             forward_unc = '//server/share'

@@ -2,6 +2,32 @@
 
 All notable changes to the Folder DateTime Fix project are documented here.
 
+## [0.7.5] - 2026-06-24
+
+### Fixed
+- **Two CI test failures unmasked by 0.7.4.** Declaring the runtime deps in
+  0.7.4 let the previously-uncollectable tests run, surfacing two pre-existing
+  issues that only appear in a clean CI environment (both verified locally on
+  Windows AND WSL/Linux before pushing):
+  - `pytest-asyncio` was used by the async tests (the `@pytest.mark.asyncio`
+    marker and the `dazzletreelib.aio` integration tests) but never declared --
+    it was only present ambiently in dev environments. CI installs only what
+    `[dev]` declares, so it failed with "async def functions are not natively
+    supported". Added `pytest-asyncio` to the `[dev]` extra.
+  - `tests/test_unc_handler.py::test_path_normalization` asserted that a
+    backslash UNC path (`\\server\share`) keeps its prefix after normalization.
+    That holds only on Windows; on POSIX the path is not absolute, so the
+    cross-platform normalizer absolutizes it against cwd. The assertion is now
+    platform-aware (strong form on Windows, share-identity invariant on POSIX).
+    A test-correctness fix -- Windows behavior is unchanged.
+
+### Added
+- `tests/one-offs/preflight_clean_venv.py` -- a clean-venv pre-flight that
+  reproduces CI's environment locally (throwaway venv, `pip install -e ".[dev]"`,
+  pytest), so dependency-resolution drift and ambient-package pollution are
+  caught before pushing instead of by the CI run. Runs under both Windows and
+  WSL/Linux Python.
+
 ## [0.7.4] - 2026-06-24
 
 ### Fixed
