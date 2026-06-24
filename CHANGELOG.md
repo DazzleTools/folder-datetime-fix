@@ -2,6 +2,26 @@
 
 All notable changes to the Folder DateTime Fix project are documented here.
 
+## [0.7.3] - 2026-06-24
+
+### Fixed
+- **Restored UNC / network-path support** that had silently broken against
+  unctools 0.2.x. unctools' 0.2.0 "probe-not-mutate" surgery removed
+  `normalize_path`, so the single `from unctools import (...)` block in
+  `unc_handler` failed entirely on that one missing name -- disabling *all*
+  unctools functionality (`UNCTOOLS_AVAILABLE` stuck `False`) even though the
+  other seven functions were still present.
+
+### Changed
+- **Path normalization now delegates to `dazzle-filekit`**
+  (`normalize_cross_platform_path`) -- the canonical owner of path normalization
+  since the unctools probe-not-mutate split (L0 = path identity, L1 =
+  normalization). `dazzle-filekit>=0.3.0` is now a required dependency; the
+  hand-rolled fallback normalization was removed.
+- Migrated `unctools.get_path_type` to its renamed replacement
+  `classify_path_origin` (the old name is a deprecation shim removed in
+  unctools 0.3.0).
+
 ## [0.7.2] - 2025-09-23
 
 ### Added

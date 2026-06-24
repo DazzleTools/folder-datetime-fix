@@ -63,15 +63,17 @@ class TestUNCToolsDetection:
         """Verify UNCtools can be imported and has expected functions."""
         import unctools
         
-        # Check that key functions are available
+        # Check that key functions are available.
+        # NOTE: `normalize_path` was removed in unctools 0.2.0 (probe-not-mutate);
+        # the handler now normalizes via dazzle-filekit, so it is no longer
+        # expected here. `get_path_type` -> `classify_path_origin` (renamed in 0.2.0).
         expected_functions = [
             'convert_to_local',
-            'convert_to_unc', 
-            'normalize_path',
+            'convert_to_unc',
             'is_unc_path',
             'is_network_drive',
             'is_subst_drive',
-            'get_path_type',
+            'classify_path_origin',
             'get_network_mappings'
         ]
         

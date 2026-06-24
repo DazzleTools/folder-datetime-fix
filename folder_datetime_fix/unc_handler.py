@@ -17,13 +17,16 @@ try:
     from unctools import (
         convert_to_local,
         convert_to_unc,
-        normalize_path,
         is_unc_path,
         is_network_drive,
         is_subst_drive,
-        get_path_type,
+        classify_path_origin,
         get_network_mappings,
     )
+    # NOTE: unctools no longer exports `normalize_path` -- it was removed in the
+    # 0.2.0 "probe-not-mutate" surgery. unctools (L0) now only probes/classifies/
+    # converts path IDENTITY; path NORMALIZATION moved DOWN to dazzle-filekit
+    # (L1), imported separately below. We delegate to it rather than re-rolling.
     UNCTOOLS_AVAILABLE = True
     import_error = None
 except ImportError as e:
@@ -34,20 +37,17 @@ except Exception as e:
     UNCTOOLS_AVAILABLE = False
     import_error = f"Unexpected error: {str(e)}"
 
-# Provide fallback implementations if unctools not available
+# Path normalization is owned by dazzle-filekit (L1) since the unctools 0.2.0
+# probe-not-mutate split. It is a HARD requirement -- normalization is core and
+# cross-platform, so we delegate to it unconditionally (no fallback to re-roll).
+from dazzle_filekit import normalize_cross_platform_path
+
+# Fallback UNC-format check only when unctools is unavailable.
 if not UNCTOOLS_AVAILABLE:
     def is_unc_path(path: str) -> bool:
         """Basic check for UNC path format."""
         path_str = str(path)
         return path_str.startswith('\\\\') or path_str.startswith('//')
-    
-    def normalize_path(path: str) -> Path:
-        """Basic path normalization without unctools."""
-        path_str = str(path)
-        if path_str.startswith('\\\\') or path_str.startswith('//'):
-            # Keep UNC path as-is
-            return Path(path)
-        return Path(path).resolve()
 
 
 class UNCHandler:
@@ -93,29 +93,20 @@ class UNCHandler:
     def normalize_path(self, path: str) -> Path:
         """
         Normalize a path, handling UNC paths and network drives.
-        
+
+        Delegates to dazzle-filekit's ``normalize_cross_platform_path`` -- the
+        canonical home for path normalization since unctools' 0.2.0
+        probe-not-mutate split. Its default ``resolve=False`` is UNC-safe: it
+        normalizes separators but does NOT resolve a UNC path down to a drive
+        letter, which would break the share.
+
         Args:
             path: Path to normalize (can be UNC, network drive, or local)
-        
+
         Returns:
             Normalized Path object
         """
-        if not self.unctools_available:
-            # Basic normalization - preserve UNC paths
-            path_str = str(path)
-            if path_str.startswith('\\\\') or path_str.startswith('//'):
-                # Keep UNC path as-is, don't resolve
-                return Path(path)
-            return Path(path).resolve()
-        
-        try:
-            # Use unctools for advanced normalization
-            normalized = normalize_path(path)
-            return Path(normalized)
-        except Exception as e:
-            if self.verbose:
-                print(f"UNCtools normalization failed, using basic: {e}")
-            return Path(path).resolve()
+        return normalize_cross_platform_path(path)
     
     def get_path_info(self, path: str) -> dict:
         """
@@ -145,7 +136,7 @@ class UNCHandler:
                 info['is_unc'] = is_unc_path(path_str)
                 info['is_network'] = is_network_drive(path_str)
                 info['is_subst'] = is_subst_drive(path_str)
-                info['type'] = get_path_type(path_str)
+                info['type'] = classify_path_origin(path_str)
             except Exception as e:
                 if self.verbose:
                     print(f"Could not get detailed path info: {e}")

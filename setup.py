@@ -29,7 +29,10 @@ setup(
     install_requires=[
         # DazzleTreeLib for improved cache with integer-based depth tracking
         "dazzletreelib>=0.1.0",
-        # unctools will be added later for enhanced UNC support
+        # dazzle-filekit owns cross-platform path normalization (L1) since the
+        # unctools 0.2.0 probe-not-mutate split; required by unc_handler.
+        "dazzle-filekit>=0.3.0",
+        # unctools (optional UNC enhancement) lives in the [unc] extra below.
     ],
     extras_require={
         "dev": [
