@@ -5,7 +5,7 @@
 [![Tests](https://github.com/djdarcy/folder-datetime-fix/actions/workflows/main.yml/badge.svg)](https://github.com/djdarcy/folder-datetime-fix/actions)
 [![License](https://img.shields.io/badge/license-GPL--3.0-green)](https://github.com/djdarcy/folder-datetime-fix/blob/main/LICENSE)
 
-Folder-Datetime-Fix restores accurate folder dates by removing common corruptions created by background features from Windows system files, like thumbs.db, and beyond.
+Folder-Datetime-Fix restores accurate folder dates by removing common corruptions created by background features from Operating System tools and files, like thumbs.db, and beyond.
 
 [Quick Start](#quick-start) • [Installation](#installation) • [Documentation](docs/) • [Report Issue](https://github.com/djdarcy/folder-datetime-fix/issues)
 
@@ -26,8 +26,17 @@ This breaks chronological sorting and makes it difficult to find your actual rec
 Fix your folders in 3 simple steps:
 
 ```bash
-# 1. Install
-pip install folder-datetime-fix
+# 1. Install (for now the process is manual since the packages aren't on PyPI yet)
+#    Note: dazzle-tree-lib is a dependency
+git clone https://github.com/djdarcy/dazzle-tree-lib.git
+cd dazzle-tree-lib
+pip install -e .
+
+cd ..
+git clone https://github.com/djdarcy/folder-datetime-fix.git
+cd folder-datetime-fix
+pip install -r requirements.txt
+pip install -e .
 
 # 2. Preview changes (always do this first!)
 cd \your\project\folder
@@ -41,7 +50,7 @@ That's it! Your folders now show their real modification dates.
 
 ## Installation
 
-### From PyPI (Recommended)
+### From PyPI (Recommended when available)
 
 ```bash
 pip install folder-datetime-fix
@@ -248,7 +257,7 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for developmen
 
 Like the project?
 
-[!["Buy Me A Coffee"](https://camo.githubusercontent.com/0b448aabee402aaf7b3b256ae471e7dc66bcf174fad7d6bb52b27138b2364e47/68747470733a2f2f7777772e6275796d6561636f666665652e636f6d2f6173736574732f696d672f637573746f6d5f696d616765732f6f72616e67655f696d672e706e67)](https://www.buymeacoffee.com/djdarcy)
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/djdarcy)
 
 ## License
 
