@@ -7,7 +7,16 @@ name = "folder-datetime-fix"
 dynamic = ["version"]
 description = "Fix folder timestamps corrupted by system files like thumbs.db on Windows"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
+dependencies = [
+    # Bedrock traversal library (cache + async tree walking) -- imported by
+    # the scanner/strategy tests as `dazzletreelib.aio`.
+    "dazzletreelib>=0.1.0",
+    # L1 file toolkit -- owns cross-platform path normalization since the
+    # unctools 0.2.0 probe-not-mutate split; consumed by unc_handler. Pulls
+    # dazzle-lib (>=3.9) transitively, which is what sets the 3.9 floor above.
+    "dazzle-filekit>=0.3.0",
+]
 license = {text = "GPL-3.0-or-later"}
 authors = [
     {name = "Dustin Darcy", email = "6962246+djdarcy@users.noreply.github.com"},
@@ -30,7 +39,6 @@ classifiers = [
     "Topic :: System :: Filesystems",
     "Topic :: Utilities",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -40,10 +48,10 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/djdarcy/modified_datetime_fix"
-Documentation = "https://github.com/djdarcy/modified_datetime_fix#readme"
-Repository = "https://github.com/djdarcy/modified_datetime_fix"
-"Bug Reports" = "https://github.com/djdarcy/modified_datetime_fix/issues"
+Homepage = "https://github.com/DazzleTools/folder-datetime-fix"
+Documentation = "https://github.com/DazzleTools/folder-datetime-fix#readme"
+Repository = "https://github.com/DazzleTools/folder-datetime-fix"
+"Bug Reports" = "https://github.com/DazzleTools/folder-datetime-fix/issues"
 "Buy Me a Coffee" = "https://www.buymeacoffee.com/djdarcy"
 
 [project.scripts]
@@ -75,10 +83,10 @@ python_functions = ["test_*"]
 
 [tool.black]
 line-length = 100
-target-version = ['py37']
+target-version = ['py39']
 
 [tool.mypy]
-python_version = "3.7"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true

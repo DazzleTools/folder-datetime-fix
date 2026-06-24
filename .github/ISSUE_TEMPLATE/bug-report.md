@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: Create a report to help improve modified_datetime_fix
+about: Create a report to help improve folder-datetime-fix
 title: "[BUG] "
 labels: bug
 assignees: 'djdarcy'

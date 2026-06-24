@@ -73,7 +73,7 @@ Development environment is properly configured!
 **Python Environment Validator**
 
 **What it does:**
-- Checks Python version (3.7+ required)
+- Checks Python version (3.9+ required)
 - Tests direct UNCtools import
 - Tests UNCtools via our module
 - Tests CLI execution context
@@ -152,7 +152,7 @@ C:\Python312\python.exe -m folder_datetime_fix [args]
 
 ## Environment Requirements
 
-- **Python**: 3.7 or higher
+- **Python**: 3.9 or higher
 - **pip**: Latest version recommended
 - **UNCtools**: Required for enhanced UNC path support
 - **Git**: Recommended for development

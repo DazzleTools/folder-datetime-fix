@@ -2,6 +2,28 @@
 
 All notable changes to the Folder DateTime Fix project are documented here.
 
+## [0.7.4] - 2026-06-24
+
+### Fixed
+- **Runtime dependencies were never installed.** `pyproject.toml`'s `[project]`
+  table is authoritative under PEP 621 but declared no `dependencies` (only a
+  dynamic `version`), so setuptools ignored `setup.py`'s `install_requires`
+  entirely. CI installed the package with none of `dazzletreelib` /
+  `dazzle-filekit`, and every test importing them failed at collection
+  (`ModuleNotFoundError: No module named 'dazzletreelib'`) -- red since the
+  `pyproject.toml` landed. Dependencies are now declared in
+  `pyproject.toml [project].dependencies`, the single authoritative location.
+
+### Changed
+- **Minimum Python is now 3.9** (was 3.8). The `dazzle-filekit` dependency pulls
+  `dazzle-lib`, which requires Python >=3.9, so 3.7/3.8 are no longer
+  installable. Dropped 3.7/3.8 from the CI matrices, the classifiers, and
+  `requires-python`.
+- Updated repository URLs to `DazzleTools/folder-datetime-fix` (moved from
+  `djdarcy/modified_datetime_fix`).
+- Removed the now-dead `install_requires` from `setup.py`; dependencies live
+  only in `pyproject.toml`.
+
 ## [0.7.3] - 2026-06-24
 
 ### Fixed
@@ -149,14 +171,14 @@ All notable changes to the Folder DateTime Fix project are documented here.
 ### Key Statistics
 - 188+ comprehensive tests
 - 3 operating systems tested
-- 5 Python versions supported (3.8-3.12)
+- 4 Python versions supported (3.9-3.12)
 - 57%+ performance improvement achieved
 - 82% code reduction through DazzleTreeLib
 
-[0.7.2]: https://github.com/djdarcy/folder-datetime-fix/releases/tag/v0.7.2
-[0.7.1]: https://github.com/djdarcy/folder-datetime-fix/releases/tag/v0.7.1
-[0.5.5]: https://github.com/djdarcy/folder-datetime-fix/releases/tag/v0.5.5
-[0.5.4]: https://github.com/djdarcy/folder-datetime-fix/releases/tag/v0.5.4
-[0.5.3]: https://github.com/djdarcy/folder-datetime-fix/releases/tag/v0.5.3
-[0.5.0]: https://github.com/djdarcy/folder-datetime-fix/releases/tag/v0.5.0
-[0.1.0]: https://github.com/djdarcy/folder-datetime-fix/releases/tag/v0.1.0
+[0.7.2]: https://github.com/DazzleTools/folder-datetime-fix/releases/tag/v0.7.2
+[0.7.1]: https://github.com/DazzleTools/folder-datetime-fix/releases/tag/v0.7.1
+[0.5.5]: https://github.com/DazzleTools/folder-datetime-fix/releases/tag/v0.5.5
+[0.5.4]: https://github.com/DazzleTools/folder-datetime-fix/releases/tag/v0.5.4
+[0.5.3]: https://github.com/DazzleTools/folder-datetime-fix/releases/tag/v0.5.3
+[0.5.0]: https://github.com/DazzleTools/folder-datetime-fix/releases/tag/v0.5.0
+[0.1.0]: https://github.com/DazzleTools/folder-datetime-fix/releases/tag/v0.1.0

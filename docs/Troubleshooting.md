@@ -265,7 +265,7 @@ folder-datetime-fix . --depth 0 -vvvv --dry-run > debug.log 2>&1
 
 ### Reporting Issues
 
-When [reporting issues](https://github.com/djdarcy/folder-datetime-fix/issues), please include:
+When [reporting issues](https://github.com/DazzleTools/folder-datetime-fix/issues), please include:
 
 1. The exact command you ran
 2. Your operating system and Python version

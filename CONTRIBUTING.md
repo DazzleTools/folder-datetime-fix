@@ -1,6 +1,6 @@
-# Contributing to modified_datetime_fix
+# Contributing to folder-datetime-fix
 
-Thank you for considering contributing to modified_datetime_fix!
+Thank you for considering contributing to folder-datetime-fix!
 
 ## Code of Conduct
 

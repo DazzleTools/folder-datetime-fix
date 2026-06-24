@@ -18,7 +18,7 @@ setup(
     long_description_content_type="text/markdown",
     author="Dustin",
     author_email="6962246+djdarcy@users.noreply.github.com",
-    url="https://github.com/djdarcy/modified_datetime_fix",
+    url="https://github.com/DazzleTools/folder-datetime-fix",
     packages=find_packages(),
     entry_points={
         "console_scripts": [
@@ -26,14 +26,10 @@ setup(
             "mod_fldr_dt=folder_datetime_fix.cli:main",  # Keep for backward compatibility
         ],
     },
-    install_requires=[
-        # DazzleTreeLib for improved cache with integer-based depth tracking
-        "dazzletreelib>=0.1.0",
-        # dazzle-filekit owns cross-platform path normalization (L1) since the
-        # unctools 0.2.0 probe-not-mutate split; required by unc_handler.
-        "dazzle-filekit>=0.3.0",
-        # unctools (optional UNC enhancement) lives in the [unc] extra below.
-    ],
+    # Runtime dependencies are declared in pyproject.toml [project].dependencies,
+    # which is authoritative under PEP 621 -- setuptools ignores install_requires
+    # here whenever a [project] table exists. Declaring them in only one place
+    # avoids the silent drift that left dazzletreelib/dazzle-filekit uninstalled.
     extras_require={
         "dev": [
             "pytest>=7.0.0",
@@ -53,8 +49,6 @@ setup(
         "Topic :: Utilities",
         "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.7",
-        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
@@ -62,10 +56,10 @@ setup(
         "Operating System :: Microsoft :: Windows",
         "Environment :: Console",
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.9",
     keywords="windows folder timestamp thumbs.db desktop.ini filesystem utilities",
     project_urls={
-        "Bug Reports": "https://github.com/djdarcy/modified_datetime_fix/issues",
-        "Source": "https://github.com/djdarcy/modified_datetime_fix",
+        "Bug Reports": "https://github.com/DazzleTools/folder-datetime-fix/issues",
+        "Source": "https://github.com/DazzleTools/folder-datetime-fix",
     },
 )

@@ -14,11 +14,8 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
-        exclude:
-          # Exclude some combinations to save CI minutes
-          - os: macos-latest
-            python-version: '3.8'
+        # Floor is 3.9: dazzle-filekit pulls dazzle-lib, which requires >=3.9.
+        python-version: ['3.9', '3.10', '3.11', '3.12']
     
     steps:
     - uses: actions/checkout@v4

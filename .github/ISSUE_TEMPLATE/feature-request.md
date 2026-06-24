@@ -1,6 +1,6 @@
 ---
 name: Feature request
-about: Suggest an idea for modified_datetime_fix
+about: Suggest an idea for folder-datetime-fix
 title: "[FEATURE] "
 labels: enhancement
 assignees: 'djdarcy'

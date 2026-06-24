@@ -1,13 +1,13 @@
 # Folder DateTime Fix
 
-[![Version](https://img.shields.io/github/v/release/djdarcy/folder-datetime-fix?sort=semver&color=blue)](https://github.com/djdarcy/folder-datetime-fix/releases)
-[![Python](https://img.shields.io/badge/python-3.8%2B-blue)](https://www.python.org/downloads/)
-[![Tests](https://github.com/djdarcy/folder-datetime-fix/actions/workflows/main.yml/badge.svg)](https://github.com/djdarcy/folder-datetime-fix/actions)
-[![License](https://img.shields.io/badge/license-GPL--3.0-green)](https://github.com/djdarcy/folder-datetime-fix/blob/main/LICENSE)
+[![Version](https://img.shields.io/github/v/release/DazzleTools/folder-datetime-fix?sort=semver&color=blue)](https://github.com/DazzleTools/folder-datetime-fix/releases)
+[![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
+[![Tests](https://github.com/DazzleTools/folder-datetime-fix/actions/workflows/main.yml/badge.svg)](https://github.com/DazzleTools/folder-datetime-fix/actions)
+[![License](https://img.shields.io/badge/license-GPL--3.0-green)](https://github.com/DazzleTools/folder-datetime-fix/blob/main/LICENSE)
 
 Folder-Datetime-Fix restores accurate folder dates by removing common corruptions created by background features from Operating System tools and files, like thumbs.db, and beyond.
 
-[Quick Start](#quick-start) • [Installation](#installation) • [Documentation](docs/) • [Report Issue](https://github.com/djdarcy/folder-datetime-fix/issues)
+[Quick Start](#quick-start) • [Installation](#installation) • [Documentation](docs/) • [Report Issue](https://github.com/DazzleTools/folder-datetime-fix/issues)
 
 ## The Problem
 
@@ -33,7 +33,7 @@ cd dazzle-tree-lib
 pip install -e .
 
 cd ..
-git clone https://github.com/djdarcy/folder-datetime-fix.git
+git clone https://github.com/DazzleTools/folder-datetime-fix.git
 cd folder-datetime-fix
 pip install -r requirements.txt
 pip install -e .
@@ -59,7 +59,7 @@ pip install folder-datetime-fix
 ### From Source
 
 ```bash
-git clone https://github.com/djdarcy/folder-datetime-fix.git
+git clone https://github.com/DazzleTools/folder-datetime-fix.git
 cd folder-datetime-fix
 pip install -e .
 ```
@@ -240,8 +240,8 @@ folder-datetime-fix C:\ --fix-all --strict
 
 ## Support
 
-- [Report Issues](https://github.com/djdarcy/folder-datetime-fix/issues)
-- [Discussions](https://github.com/djdarcy/folder-datetime-fix/discussions)
+- [Report Issues](https://github.com/DazzleTools/folder-datetime-fix/issues)
+- [Discussions](https://github.com/DazzleTools/folder-datetime-fix/discussions)
 
 ## Documentation
 
