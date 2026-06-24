@@ -2,6 +2,42 @@
 
 All notable changes to the Folder DateTime Fix project are documented here.
 
+## [0.7.7] - 2026-06-24
+
+### Changed
+- **`unctools` now resolves from PyPI, not a local dev checkout.** Bumped the
+  `[unc]` extra (and `requirements.txt`) from `unctools>=0.1.0` to `>=0.2.0` --
+  the version with `classify_path_origin` (the probe-not-mutate rename) that
+  `unc_handler` imports; an older unctools would silently disable UNC support.
+- Removed the hardcoded `previous-unc-tests\...` local-dev install fallbacks
+  from the setup scripts and troubleshooting docs -- unctools is on PyPI
+  (`pip install unctools`).
+
+### Fixed
+- **`get_path_info` crashed on an unreachable UNC share on Python 3.9 Windows.**
+  `Path.resolve()` / `.exists()` raise `OSError` ([WinError 64], "network name
+  is no longer available") for a dead network share on Python 3.9 Windows
+  (3.10+ swallow it), which failed `test_various_unc_formats` on the
+  windows-3.9 CI job. Path inspection now guards those filesystem-touching
+  calls and degrades gracefully (resolved -> the literal path, exists/is_dir
+  -> False). Added a version-independent regression test that mocks the
+  OSError.
+- **`scripts/setup/validate_dev_environment.py` crashed on cp1252 Windows
+  shells.** It printed Unicode status glyphs (`U+2713` etc.) that raise
+  `UnicodeEncodeError` on the default Windows console codepage, so the
+  validator never ran in its primary environment. Replaced them with ASCII
+  markers (`[OK]` / `[X]` / `[i]` / `[ALL OK]` / `[!]`). Surfaced by the new
+  v0.7.7 human test checklist.
+- `tests/one-offs/preflight_clean_venv.py` now sets `PYTHONUTF8=1` for its
+  child processes, so pip's resolved-versions output renders instead of being
+  swallowed by a cp1252 logging error on non-ASCII upstream package metadata.
+
+### Added
+- `tests/checklists/v0.7.7__Epic__modified-datetime-fix-ci-fix-arc.md` -- a
+  human test checklist for the 0.7.4 -> 0.7.7 CI-fix arc (clean-env install,
+  UNC handling, cross-version/platform via the pre-flight, dev-script
+  rendering).
+
 ## [0.7.5] - 2026-06-24
 
 ### Fixed

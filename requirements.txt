@@ -2,10 +2,10 @@
 # No external dependencies required for basic functionality
 
 # Local development dependencies
-unctools>=0.1.0  # For enhanced UNC path support - required for local development
+unctools>=0.2.0  # Enhanced UNC path support (PyPI; 0.2.0+ has classify_path_origin)
 
 # Optional dependencies for end users
-# unctools>=0.1.0  # For enhanced UNC path support (install with pip install .[unc])
+# unctools>=0.2.0  # For enhanced UNC path support (install with pip install .[unc])
 
 # Development dependencies (install with pip install .[dev])
 # pytest>=7.0.0

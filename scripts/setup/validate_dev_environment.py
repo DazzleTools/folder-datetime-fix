@@ -22,10 +22,10 @@ def check_python_version():
     print(f"  Python {version.major}.{version.minor}.{version.micro}")
     
     if version < (3, 9):
-        print("  ✗ Python 3.9+ required")
+        print("  [X] Python 3.9+ required")
         return False
     
-    print("  ✓ Python version OK")
+    print("  [OK] Python version OK")
     return True
 
 
@@ -35,21 +35,21 @@ def check_unctools_direct():
     
     try:
         import unctools
-        print(f"  ✓ UNCtools found at: {unctools.__file__}")
+        print(f"  [OK] UNCtools found at: {unctools.__file__}")
         
         # Check for key functions
         required_functions = ['is_unc_path', 'convert_to_local', 'convert_to_unc']
         missing = [f for f in required_functions if not hasattr(unctools, f)]
         
         if missing:
-            print(f"  ✗ Missing functions: {missing}")
+            print(f"  [X] Missing functions: {missing}")
             return False
             
-        print(f"  ✓ All required functions available")
+        print(f"  [OK] All required functions available")
         return True
         
     except ImportError as e:
-        print(f"  ✗ Import failed: {e}")
+        print(f"  [X] Import failed: {e}")
         print("\n  To fix: pip install unctools")
         return False
 
@@ -62,10 +62,10 @@ def check_unctools_via_module():
         from folder_datetime_fix.unc_handler import UNCTOOLS_AVAILABLE, import_error
         
         if UNCTOOLS_AVAILABLE:
-            print("  ✓ Module detects UNCtools as available")
+            print("  [OK] Module detects UNCtools as available")
             return True
         else:
-            print(f"  ✗ Module detection failed: {import_error}")
+            print(f"  [X] Module detection failed: {import_error}")
             print("\n  Possible fixes:")
             print("  1. Set PYTHONPATH to include unctools location")
             print("  2. Reinstall unctools: pip install --force-reinstall unctools")
@@ -73,7 +73,7 @@ def check_unctools_via_module():
             return False
             
     except Exception as e:
-        print(f"  ✗ Module import failed: {e}")
+        print(f"  [X] Module import failed: {e}")
         return False
 
 
@@ -91,10 +91,10 @@ def check_cli_execution():
         )
         
         if result.returncode != 0:
-            print(f"  ✗ CLI execution failed: {result.stderr}")
+            print(f"  [X] CLI execution failed: {result.stderr}")
             return False
             
-        print(f"  ✓ CLI runs successfully")
+        print(f"  [OK] CLI runs successfully")
         
         # Test verbose mode to check UNCtools message
         result = subprocess.run(
@@ -106,10 +106,10 @@ def check_cli_execution():
         )
         
         if 'UNCtools is available' in result.stdout:
-            print("  ✓ CLI detects UNCtools")
+            print("  [OK] CLI detects UNCtools")
             return True
         elif 'UNCtools not found' in result.stdout:
-            print("  ✗ CLI doesn't detect UNCtools")
+            print("  [X] CLI doesn't detect UNCtools")
             print("\n  This is the import context issue!")
             print("  Run: python scripts/diagnose_unctools_env.py for detailed analysis")
             return False
@@ -118,10 +118,10 @@ def check_cli_execution():
             return None
             
     except subprocess.TimeoutExpired:
-        print("  ✗ CLI execution timed out")
+        print("  [X] CLI execution timed out")
         return False
     except Exception as e:
-        print(f"  ✗ CLI test failed: {e}")
+        print(f"  [X] CLI test failed: {e}")
         return False
 
 
@@ -139,13 +139,13 @@ def check_environment_variables():
     
     # Check for development indicators
     if os.path.exists('.git'):
-        print("  ✓ Git repository detected (development environment)")
+        print("  [OK] Git repository detected (development environment)")
     
     # Check for virtual environment
     if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
-        print(f"  ✓ Virtual environment active: {sys.prefix}")
+        print(f"  [OK] Virtual environment active: {sys.prefix}")
     else:
-        print("  ℹ Not in a virtual environment")
+        print("  [i] Not in a virtual environment")
     
     return True
 
@@ -157,17 +157,11 @@ def suggest_fixes(results):
     print("=" * 60)
     
     if not results['direct_import']:
-        print("\n1. Install UNCtools:")
+        print("\n1. Install UNCtools (optional -- enables enhanced UNC support):")
         print("   pip install unctools")
-        print("   OR")
-        print("   pip install -e C:\\code\\previous-unc-tests\\UNC-protection\\UNC-backup-test-dev-1")
-    
+
     elif not results['module_detection']:
-        print("\n1. Fix module import context:")
-        print("   Option A: Set PYTHONPATH")
-        print("   set PYTHONPATH=C:\\code\\previous-unc-tests\\UNC-protection\\UNC-backup-test-dev-1;%PYTHONPATH%")
-        print()
-        print("   Option B: Reinstall unctools")
+        print("\n1. Reinstall UNCtools:")
         print("   pip uninstall unctools")
         print("   pip install unctools")
     
@@ -181,9 +175,9 @@ def suggest_fixes(results):
         print("   C:\\Python312\\python.exe -m folder_datetime_fix ...")
     
     if all(results.values()):
-        print("\n✅ All checks passed! Environment is properly configured.")
+        print("\n[ALL OK] All checks passed! Environment is properly configured.")
     else:
-        print("\n⚠ Some checks failed. Follow the recommendations above.")
+        print("\n[!] Some checks failed. Follow the recommendations above.")
 
 
 def main():

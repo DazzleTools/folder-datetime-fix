@@ -166,12 +166,7 @@ This indicates the **import context issue**.
 
 ## Quick Fixes
 
-### Fix 1: Set PYTHONPATH
-```cmd
-set PYTHONPATH=C:\code\previous-unc-tests\UNC-protection\UNC-backup-test-dev-1;%PYTHONPATH%
-```
-
-### Fix 2: Reinstall UNCtools
+### Fix: Reinstall UNCtools from PyPI
 ```bash
 pip uninstall unctools
 pip install unctools

@@ -12,29 +12,20 @@ REM Check Python availability
 python --version >nul 2>&1
 if errorlevel 1 (
     echo ERROR: Python not found in PATH
-    echo Please install Python 3.7+ and add to PATH
+    echo Please install Python 3.9+ and add to PATH
     exit /b 1
 )
 
 echo Step 1: Installing/Updating dependencies...
 echo.
 
-REM Try to install UNCtools (will update if already installed)
-echo Installing UNCtools...
+REM Install UNCtools from PyPI (optional -- enables enhanced UNC path support)
+echo Installing UNCtools from PyPI...
 pip install --upgrade unctools >nul 2>&1
 if errorlevel 1 (
     echo Warning: Could not install unctools from PyPI
-    echo Attempting editable install from local development...
-    
-    REM Try editable install from known location
-    if exist "C:\code\previous-unc-tests\UNC-protection\UNC-backup-test-dev-1\setup.py" (
-        pip install -e "C:\code\previous-unc-tests\UNC-protection\UNC-backup-test-dev-1" >nul 2>&1
-        if errorlevel 1 (
-            echo Warning: Editable install also failed
-        ) else (
-            echo Installed from local development directory
-        )
-    )
+    echo UNC enhancement is optional; basic path handling will be used.
+    echo See https://pypi.org/project/unctools/
 )
 
 REM Install other requirements
@@ -46,16 +37,11 @@ if exist requirements.txt (
 echo.
 echo Step 2: Setting environment variables...
 
-REM Check if PYTHONPATH needs adjustment
+REM Confirm UNCtools is importable (optional enhancement)
 python -c "import unctools" >nul 2>&1
 if errorlevel 1 (
-    echo UNCtools not found in default path
-    echo Adding to PYTHONPATH...
-    set PYTHONPATH=C:\code\previous-unc-tests\UNC-protection\UNC-backup-test-dev-1;%PYTHONPATH%
-    echo PYTHONPATH updated for this session
-    echo.
-    echo To make permanent, add to system environment variables:
-    echo   C:\code\previous-unc-tests\UNC-protection\UNC-backup-test-dev-1
+    echo UNCtools not installed -- UNC enhancement disabled.
+    echo To enable: pip install unctools
 )
 
 echo.

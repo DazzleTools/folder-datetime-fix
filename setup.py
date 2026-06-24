@@ -38,7 +38,9 @@ setup(
             "mypy>=1.0.0",
         ],
         "unc": [
-            "unctools>=0.1.0",  # Optional for enhanced UNC path support
+            # 0.2.0+ has classify_path_origin (probe-not-mutate rename) that
+            # unc_handler imports.
+            "unctools>=0.2.0",  # Optional for enhanced UNC path support
         ],
     },
     classifiers=[

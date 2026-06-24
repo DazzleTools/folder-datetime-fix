@@ -71,7 +71,9 @@ dev = [
     "mypy>=1.0.0",
 ]
 unc = [
-    "unctools>=0.1.0",
+    # 0.2.0+ has classify_path_origin (the probe-not-mutate rename) that
+    # unc_handler imports; older unctools would silently disable UNC support.
+    "unctools>=0.2.0",
 ]
 
 [tool.setuptools.dynamic]

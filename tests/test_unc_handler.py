@@ -267,7 +267,26 @@ class TestUNCPathEdgeCases(unittest.TestCase):
                     expected_is_unc,
                     f"Failed for path: {path}"
                 )
-    
+
+    def test_get_path_info_survives_network_oserror(self):
+        """get_path_info must not crash when resolve()/exists() raise OSError
+        for an unreachable UNC share -- e.g. [WinError 64] on Python 3.9
+        Windows, where Path.resolve()/exists() do not swallow network errors
+        the way 3.10+ do. Regression for the windows-3.9 CI failure in
+        test_various_unc_formats.
+        """
+        handler = UNCHandler()
+        unc = '\\\\192.168.1.1\\share'
+        net_err = OSError(64, 'The specified network name is no longer available')
+        with patch('pathlib.Path.resolve', side_effect=net_err), \
+             patch('pathlib.Path.exists', side_effect=net_err):
+            info = handler.get_path_info(unc)  # must NOT raise
+        # Filesystem-touching fields degrade gracefully...
+        self.assertFalse(info['exists'])
+        self.assertFalse(info['is_dir'])
+        # ...while format-only detection is unaffected.
+        self.assertTrue(info['is_unc'])
+
     def test_unicode_in_paths(self):
         """Test handling of Unicode characters in paths."""
         handler = UNCHandler()

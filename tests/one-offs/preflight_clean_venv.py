@@ -38,6 +38,10 @@ def _run(cmd, **kw):
 
 
 def main() -> int:
+    # Force UTF-8 in child processes so pip's output renderer does not crash on
+    # cp1252 Windows consoles when an upstream package's metadata has non-ASCII
+    # (e.g. an author name) -- without this the resolved-versions table is lost.
+    os.environ["PYTHONUTF8"] = "1"
     work = tempfile.mkdtemp(prefix="fdf-preflight-")
     venv_dir = Path(work) / "venv"
     try:

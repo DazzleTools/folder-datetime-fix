@@ -96,12 +96,7 @@ Python's import system behaves differently in different execution contexts:
 
 ### The Fix
 
-#### Option 1: Set PYTHONPATH
-```cmd
-set PYTHONPATH=C:\code\previous-unc-tests\UNC-protection\UNC-backup-test-dev-1;%PYTHONPATH%
-```
-
-#### Option 2: Reinstall UNCtools properly
+#### Reinstall UNCtools from PyPI
 ```bash
 pip uninstall unctools
 pip install unctools

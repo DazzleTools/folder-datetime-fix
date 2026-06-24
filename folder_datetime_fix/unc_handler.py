@@ -119,11 +119,29 @@ class UNCHandler:
             Dictionary with path information
         """
         path_obj = Path(path)
+        # Resolving or stat-ing a path can hit the filesystem -- and for a UNC
+        # path, the NETWORK. An unreachable share raises OSError (e.g.
+        # [WinError 64] "network name is no longer available"), notably on
+        # Python 3.9 Windows where Path.resolve()/exists() do not swallow
+        # network errors the way 3.10+ do. Degrade gracefully so path
+        # inspection never crashes on a dead share.
+        try:
+            resolved = str(path_obj.resolve())
+        except OSError:
+            resolved = str(path_obj)
+        try:
+            exists = path_obj.exists()
+        except OSError:
+            exists = False
+        try:
+            is_dir = path_obj.is_dir() if exists else False
+        except OSError:
+            is_dir = False
         info = {
             'original': str(path),
-            'resolved': str(path_obj.resolve()),
-            'exists': path_obj.exists(),
-            'is_dir': path_obj.is_dir() if path_obj.exists() else False,
+            'resolved': resolved,
+            'exists': exists,
+            'is_dir': is_dir,
             'is_unc': False,
             'is_network': False,
             'is_subst': False,

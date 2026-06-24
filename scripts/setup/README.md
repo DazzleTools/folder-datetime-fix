@@ -26,8 +26,8 @@ python validate_dev_environment.py
 # If UNCtools not found:
 pip install unctools
 
-# If import context issues:
-set PYTHONPATH=C:\code\previous-unc-tests\UNC-protection\UNC-backup-test-dev-1;%PYTHONPATH%
+# If import issues persist, reinstall:
+pip uninstall unctools && pip install unctools
 
 # Re-run validation
 python validate_dev_environment.py
@@ -116,8 +116,6 @@ python validate_dev_environment.py
 **Solution:**
 ```bash
 pip install unctools
-# OR for development
-pip install -e C:\code\previous-unc-tests\UNC-protection\UNC-backup-test-dev-1
 ```
 
 ### Issue 2: Module Detection Failed
@@ -127,10 +125,7 @@ pip install -e C:\code\previous-unc-tests\UNC-protection\UNC-backup-test-dev-1
 
 **Solution:**
 ```cmd
-# Set PYTHONPATH for this session
-set PYTHONPATH=C:\code\previous-unc-tests\UNC-protection\UNC-backup-test-dev-1;%PYTHONPATH%
-
-# Or reinstall unctools
+# Reinstall unctools
 pip uninstall unctools
 pip install unctools
 ```
