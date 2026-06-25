@@ -2,6 +2,21 @@
 
 All notable changes to the Folder DateTime Fix project are documented here.
 
+## [0.8.4] - 2026-06-25
+
+### Changed
+- **README rewritten for the PyPI release.** Quick Start now installs from
+  PyPI (`pip install folder-datetime-fix`) and runs the short `fdtfix` command
+  instead of cloning the dependency stack by hand. Added editable-install and
+  "run without installing" (the `fdtfix.py` shim) notes, and a cross-platform
+  "What counts as system litter" section documenting the Windows/macOS/Linux
+  files the tool ignores -- and that VCS metadata dirs like `.git` are skipped
+  by default while user files like `.gitignore` are not.
+
+### Added
+- `tests/checklists/v0.8.4__Epic__pypi-src-migration.md` -- human test
+  checklist for the 0.8.x PyPI + src/ migration.
+
 ## [0.8.3] - 2026-06-25
 
 ### Added

@@ -11,7 +11,7 @@ Folder-Datetime-Fix restores accurate folder dates by removing common corruption
 
 ## The Problem
 
-Windows Explorer creates hidden files (`thumbs.db`, `desktop.ini`) that corrupt your folder timestamps:
+Operating systems and apps scatter hidden housekeeping files into your folders -- and *writing* them bumps the folder's "modified" date to today, even though your real content hasn't changed:
 
 | Before                                        | After Fix                                    |
 | --------------------------------------------- | -------------------------------------------- |
@@ -21,47 +21,69 @@ Windows Explorer creates hidden files (`thumbs.db`, `desktop.ini`) that corrupt 
 
 This breaks chronological sorting and makes it difficult to find your actual recent work.
 
+### What counts as "system litter"
+
+When computing a folder's true modification date, the tool ignores OS- and
+app-generated files so their churn doesn't corrupt your timestamps. It
+recognises files and folders across platforms, including:
+
+- **Windows:** `thumbs.db`, `desktop.ini`, `IconCache.db`, ...
+- **macOS:** `.DS_Store`, AppleDouble `._*` resource forks, `.Spotlight-V100`,
+  `.fseventsd`, `.Trashes`, ...
+- **Linux:** `.directory`, `.hidden`, ...
+- **Tooling:** `__pycache__`, `node_modules`, build/cache dirs, and VCS
+  metadata directories (`.git`, `.svn`, `.hg`).
+
+VCS *metadata directories* are skipped by default -- their churn isn't "your
+content" -- but user-maintained files like `.gitignore` are **not** treated as
+litter. Only the auto-generated bits are ignored.
+
 ## Quick Start
 
 Fix your folders in 3 simple steps:
 
 ```bash
-# 1. Install (for now the process is manual since the packages aren't on PyPI yet)
-#    Note: dazzle-tree-lib is a dependency
-git clone https://github.com/djdarcy/dazzle-tree-lib.git
-cd dazzle-tree-lib
-pip install -e .
-
-cd ..
-git clone https://github.com/DazzleTools/folder-datetime-fix.git
-cd folder-datetime-fix
-pip install -r requirements.txt
-pip install -e .
+# 1. Install from PyPI
+pip install folder-datetime-fix
 
 # 2. Preview changes (always do this first!)
-cd \your\project\folder
-folder-datetime-fix . --fix-all --dry-run
+cd /path/to/your/folder        # e.g.  cd "C:\Projects"  on Windows
+fdtfix . --fix-all --dry-run
 
 # 3. Apply the fix
-folder-datetime-fix . --fix-all
+fdtfix . --fix-all
 ```
 
 That's it! Your folders now show their real modification dates. 
 
 ## Installation
 
-### From PyPI (Recommended when available)
+### From PyPI (recommended)
 
 ```bash
 pip install folder-datetime-fix
 ```
 
-### From Source
+Run it with the short **`fdtfix`** command (the longer `folder-datetime-fix`
+and the legacy `mod_fldr_dt` commands also work). It runs on Windows, macOS,
+and Linux; the dependencies (DazzleTreeLib, dazzle-filekit) install
+automatically.
+
+### From source (for development)
 
 ```bash
 git clone https://github.com/DazzleTools/folder-datetime-fix.git
 cd folder-datetime-fix
-pip install -e .
+pip install -e .          # editable install (PEP 660; no setup.py needed)
+```
+
+### Run without installing
+
+From a git clone you can run the tool directly via the `fdtfix.py` shim --
+no install required (it adds the in-repo `src/` to the path):
+
+```bash
+python fdtfix.py . --fix-all --dry-run
 ```
 
 ## Common Use Cases
