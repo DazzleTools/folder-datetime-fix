@@ -114,7 +114,7 @@ BASE_VERSION="${MAJOR}.${MINOR}.${PATCH}"
 CURRENT_VERSION=$(grep -o '__version__ = ".*"' "$SOURCE_FILE" | cut -d'"' -f2)
 
 # Get git information
-if command -v git >/dev/null 2>&1 && [ -d ".git" -o -d "../.git" ]; then
+if command -v git >/dev/null 2>&1 && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     # Get branch name with fallback
     BRANCH_NAME=$(git branch --show-current 2>/dev/null || echo "unknown")
     # Replace any slashes in branch name with hyphens

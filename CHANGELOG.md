@@ -2,6 +2,16 @@
 
 All notable changes to the Folder DateTime Fix project are documented here.
 
+## [0.8.5] - 2026-06-25
+
+### Fixed
+- **Version autobump now works in linked git worktrees.**
+  `scripts/update-version.sh` detected git via `[ -d .git ]`, which is false in
+  a linked worktree (where `.git` is a *file*, not a directory), so version.py
+  got stamped `unknown/nogit000` there. It now uses
+  `git rev-parse --is-inside-work-tree`. Surfaced while stamping the release
+  version on the `main` worktree for the first PyPI publish.
+
 ## [0.8.4] - 2026-06-25
 
 ### Changed
