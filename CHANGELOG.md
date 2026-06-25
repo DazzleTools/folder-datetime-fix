@@ -2,6 +2,15 @@
 
 All notable changes to the Folder DateTime Fix project are documented here.
 
+## [0.8.6] - 2026-06-25
+
+### Changed
+- README badges aligned with the DazzleTools PyPI house style (matching
+  dazzlecmd): PyPI version, release date, CI, Python 3.9+, GPL v3, and a
+  platform badge (the github-release Version badge is now the PyPI badge; the
+  CI/tests badge is kept). A downloads/installs badge is deferred until the
+  per-project install-stats tracker (gist + stats page) is set up.
+
 ## [0.8.5] - 2026-06-25
 
 ### Fixed
