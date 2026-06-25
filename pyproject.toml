@@ -68,7 +68,7 @@ dev = [
     "pytest-asyncio>=0.21.0",
     "black>=23.0.0",
     "flake8>=6.0.0",
-    "mypy>=1.0.0",
+    "mypy>=1.19.1",
 ]
 unc = [
     # 0.2.0+ has classify_path_origin (the probe-not-mutate rename) that
