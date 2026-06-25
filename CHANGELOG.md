@@ -2,6 +2,20 @@
 
 All notable changes to the Folder DateTime Fix project are documented here.
 
+## [0.8.2] - 2026-06-25
+
+### Changed
+- **Migrated to a `src/` layout** (`folder_datetime_fix/` ->
+  `src/folder_datetime_fix/`). The standard packaging layout: tests import the
+  *installed* package, not the source tree, so the suite can't pass against an
+  un-built/half-built package. No public API or behavior change; `git mv`
+  preserves file history.
+- `pyproject.toml` package discovery now uses `where = ["src"]`.
+- `fdtfix.py` (the no-install, git-clone runner) bootstraps `src/` onto
+  `sys.path`, so `python fdtfix.py ...` still works from a fresh checkout
+  (preferring local changes over any installed copy).
+- CI lint paths updated to `src/folder_datetime_fix`.
+
 ## [0.8.1] - 2026-06-25
 
 ### Fixed

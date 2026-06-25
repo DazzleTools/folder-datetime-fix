@@ -70,19 +70,22 @@ else
     NC=''
 fi
 
-# Configuration
-SOURCE_FILE="folder_datetime_fix/version.py"
+# Configuration -- version.py lives under src/ (src layout); the flat-layout
+# path is kept as a fallback for older checkouts.
+SOURCE_FILE="src/folder_datetime_fix/version.py"
 
-# Check if we're in the right directory
+# Locate version.py whether run from the repo root or the scripts/ directory,
+# and whether the project uses the src/ layout or the legacy flat layout.
 if [ ! -f "$SOURCE_FILE" ]; then
-    # Try from scripts directory
-    if [ -f "../$SOURCE_FILE" ]; then
+    if [ -f "folder_datetime_fix/version.py" ]; then
+        SOURCE_FILE="folder_datetime_fix/version.py"
+    elif [ -f "../src/folder_datetime_fix/version.py" ]; then
         cd ..
     elif [ -f "../folder_datetime_fix/version.py" ]; then
         cd ..
         SOURCE_FILE="folder_datetime_fix/version.py"
     else
-        echo -e "${RED}Error:${NC} $SOURCE_FILE not found"
+        echo -e "${RED}Error:${NC} version.py not found under src/folder_datetime_fix or folder_datetime_fix"
         echo "Please run from the project root directory"
         exit 1
     fi

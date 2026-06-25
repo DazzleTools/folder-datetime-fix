@@ -69,18 +69,18 @@ jobs:
 
     - name: Check code formatting with black
       run: |
-        black --check folder_datetime_fix tests
+        black --check src/folder_datetime_fix tests
       continue-on-error: true
 
     - name: Lint with flake8
       run: |
-        flake8 folder_datetime_fix tests --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 folder_datetime_fix tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        flake8 src/folder_datetime_fix tests --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 src/folder_datetime_fix tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       continue-on-error: true
 
     - name: Type check with mypy
       run: |
-        mypy folder_datetime_fix --ignore-missing-imports
+        mypy src/folder_datetime_fix --ignore-missing-imports
       continue-on-error: true
 
   github-integration:
