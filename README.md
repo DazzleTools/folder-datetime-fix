@@ -1,9 +1,11 @@
 # Folder DateTime Fix
 
-[![Version](https://img.shields.io/github/v/release/DazzleTools/folder-datetime-fix?sort=semver&color=blue)](https://github.com/DazzleTools/folder-datetime-fix/releases)
-[![Python](https://img.shields.io/badge/python-3.9%2B-blue)](https://www.python.org/downloads/)
-[![Tests](https://github.com/DazzleTools/folder-datetime-fix/actions/workflows/main.yml/badge.svg)](https://github.com/DazzleTools/folder-datetime-fix/actions)
-[![License](https://img.shields.io/badge/license-GPL--3.0-green)](https://github.com/DazzleTools/folder-datetime-fix/blob/main/LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/folder-datetime-fix?color=green)](https://pypi.org/project/folder-datetime-fix/)
+[![Release Date](https://img.shields.io/github/release-date/DazzleTools/folder-datetime-fix?color=green)](https://github.com/DazzleTools/folder-datetime-fix/releases)
+[![CI](https://github.com/DazzleTools/folder-datetime-fix/actions/workflows/main.yml/badge.svg)](https://github.com/DazzleTools/folder-datetime-fix/actions/workflows/main.yml)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: GPL v3](https://img.shields.io/badge/license-GPL%20v3-green.svg)](https://www.gnu.org/licenses/gpl-3.0.html)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)](#installation)
 
 Folder-Datetime-Fix restores accurate folder dates by removing common corruptions created by background features from Operating System tools and files, like thumbs.db, and beyond.
 
