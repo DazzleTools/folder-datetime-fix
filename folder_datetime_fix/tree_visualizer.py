@@ -11,6 +11,8 @@ from typing import Optional, List, Dict, Any, Tuple
 from datetime import datetime
 from collections import defaultdict
 
+from .console_safe import icon, stream_can_encode
+
 # Try to import optional dependencies for graphical output
 try:
     import graphviz
@@ -49,7 +51,12 @@ class TreeVisualizer:
             show_sizes: Show folder sizes (file count)
             show_depth: Show depth numbers
         """
-        self.chars = self.TREE_CHARS if use_unicode else self.TREE_CHARS_ASCII
+        # Use Unicode box chars only when requested AND the console can encode
+        # them -- a cp1252 Windows console would otherwise crash on output.
+        if use_unicode and stream_can_encode(self.TREE_CHARS['branch']):
+            self.chars = self.TREE_CHARS
+        else:
+            self.chars = self.TREE_CHARS_ASCII
         self.show_timestamps = show_timestamps
         self.show_sizes = show_sizes
         self.show_depth = show_depth
@@ -80,7 +87,7 @@ class TreeVisualizer:
             return f"Error: Path {path} does not exist"
         
         output = []
-        folder_icon = "[DIR]" if use_ascii else "📁"
+        folder_icon = icon("📁", "[DIR]", force_ascii=use_ascii)
         output.append(f"{folder_icon} {path}")
         
         if self.show_timestamps:
@@ -152,7 +159,7 @@ class TreeVisualizer:
                 is_last_file = (i == len(files) - 1) and len(folders) == 0
                 char = self.chars['last'] if is_last_file else self.chars['branch']
                 
-                file_icon = "[FILE]" if use_ascii else "📄"
+                file_icon = icon("📄", "[FILE]", force_ascii=use_ascii)
                 line = f"{prefix}{char}{file_icon} {file.name}"
                 
                 if self.show_timestamps:
@@ -176,7 +183,7 @@ class TreeVisualizer:
                     self.stats['max_depth'] = depth + 1
                 
                 # Build folder line
-                folder_icon = "[DIR]" if use_ascii else "📁"
+                folder_icon = icon("📁", "[DIR]", force_ascii=use_ascii)
                 line = f"{prefix}{char}{folder_icon} {folder.name}"
                 
                 if self.show_timestamps:
@@ -261,7 +268,7 @@ class TreeVisualizer:
                     display_path = path.name if depth > 0 else path
                 
                 # Build line
-                line = f"{indent}📁 {display_path}"
+                line = f"{indent}{icon('📁', '[DIR]')} {display_path}"
                 
                 if timestamp:
                     line += f" [{timestamp.strftime('%Y-%m-%d %H:%M:%S')}]"

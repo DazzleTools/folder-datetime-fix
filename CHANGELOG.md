@@ -2,6 +2,22 @@
 
 All notable changes to the Folder DateTime Fix project are documented here.
 
+## [0.8.1] - 2026-06-25
+
+### Fixed
+- **CLI no longer crashes on legacy Windows code pages (cp1252/cp437).** Tree
+  output (folder/file emoji and Unicode box-drawing chars) and help tips were
+  printed unconditionally; on a console that can't encode them this raised
+  `UnicodeEncodeError` and aborted the command. Output now degrades to ASCII
+  when the active stdout stream can't encode a glyph -- and keeps the nicer
+  glyphs on UTF-8 terminals (Windows Terminal, macOS, Linux). The tree's
+  Unicode box chars are now also gated on the console's actual encoding, not
+  just the `use_unicode` flag.
+
+### Added
+- `folder_datetime_fix/console_safe.py` (`stream_can_encode`, `icon`) and
+  `tests/test_console_safe.py` regression coverage.
+
 ## [0.8.0] - 2026-06-25
 
 First of the 0.8.x line that ships folder-datetime-fix to PyPI as a

@@ -6,6 +6,8 @@ import random
 from typing import Optional, List, Dict
 from pathlib import Path
 
+from ..console_safe import icon
+
 
 class HelpManager:
     """Manages the modular help system."""
@@ -218,8 +220,8 @@ Available topics: strategy, analyze, patterns, layers, fdtfix"""
             if exclude_sections:
                 section_name = self._find_tip_section(tip)
                 if section_name and section_name not in ['tips'] and section_name not in exclude_sections:
-                    return f"💡 TIP ({section_name}): {tip}"
-            return f"💡 TIP: {tip}"
+                    return f"{icon('💡 ', '')}TIP ({section_name}): {tip}"
+            return f"{icon('💡 ', '')}TIP: {tip}"
         
         # No suitable tips found
         return ""
