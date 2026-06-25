@@ -2,6 +2,21 @@
 
 All notable changes to the Folder DateTime Fix project are documented here.
 
+## [0.8.3] - 2026-06-25
+
+### Added
+- **PyPI publishing via trusted publishing (OIDC).** New
+  `.github/workflows/release.yml` builds the sdist + wheel and publishes to
+  PyPI on a published GitHub Release using OpenID Connect -- no API token
+  stored. Build and publish are separate jobs; the publish job runs in the
+  `pypi` GitHub environment with `id-token: write`.
+
+### Removed
+- `.github/workflows/publish.yml` (the old token-based publisher, superseded
+  by `release.yml`).
+- `.github/workflows/tests.yml` (Windows-only, redundant with the `CI`
+  workflow's `windows-latest` matrix legs).
+
 ## [0.8.2] - 2026-06-25
 
 ### Changed
