@@ -2,6 +2,32 @@
 
 All notable changes to the Folder DateTime Fix project are documented here.
 
+## [0.8.0] - 2026-06-25
+
+First of the 0.8.x line that ships folder-datetime-fix to PyPI as a
+cross-platform package. This release is packaging-metadata only (no code
+or layout changes yet).
+
+### Changed
+- Classifier `Operating System :: Microsoft :: Windows` -> `OS Independent`.
+  The tool runs on Windows/macOS/Linux (the suite passes on Linux and it
+  already handles `.DS_Store` and friends, not just thumbs.db/desktop.ini).
+- `dazzletreelib` floor `>=0.1.0` -> `>=0.10.2` -- the version on PyPI that
+  actually provides the `dazzletreelib.aio` API the package imports (0.1.0
+  was a placeholder).
+- Build now requires `setuptools>=64` so `pip install -e .` (editable) works
+  from `pyproject.toml` alone via PEP 660, now that `setup.py` is removed.
+- Enriched PyPI keywords for discoverability (macos, linux, ds-store,
+  cross-platform, mtime, repair).
+
+### Added
+- `fdtfix` console command -- a short alias for `folder-datetime-fix`
+  (the `folder-datetime-fix` and `mod_fldr_dt` commands remain).
+
+### Removed
+- Vestigial `setup.py`. `pyproject.toml` is the single source of truth for
+  packaging (metadata, dynamic version, dependencies, entry points).
+
 ## [0.7.7] - 2026-06-24
 
 ### Changed
